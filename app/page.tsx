@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import LeadForm from "./LeadForm";
 
 
 
@@ -56,16 +57,16 @@ function Hero() {
       </div>
 
       {/* CENTERED CONTENT */}
-      <div className="relative mx-auto max-w-6xl px-4 py-28 text-center">
+      <div className="relative mx-auto max-w10xl px-4 py-0 text-center">
         <div className="mb-14 flex justify-center">
           <img
             src="/logo.svg"
             alt="HeyMies"
-            className="h-56 w-auto md:h-64 lg:h-72"
+            className="h-150 w-auto md:h-200 lg:h-160"
           />
         </div>
 
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-600">
+        <p className="text-xs font-semibold uppercase tracking-widest text-slate-700">
           Smart. Simple. Sorted.
         </p>
 
@@ -226,16 +227,7 @@ function FinalCTA() {
       <div className="mx-auto max-w-6xl">
         <h2 className="text-3xl font-semibold">Stop chasing. Start closing.</h2>
         <p className="mt-3 text-slate-300">Early access for agents.</p>
-
-        <div className="mt-6 max-w-sm space-y-3">
-          <input
-            placeholder="Email"
-            className="w-full rounded-xl px-4 py-3 text-slate-900 outline-none ring-1 ring-white/20 focus:ring-2 focus:ring-emerald-400"
-          />
-          <button className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-500">
-            Request access
-          </button>
-        </div>
+        <LeadForm source="homepage-cta" />
       </div>
     </section>
   );
