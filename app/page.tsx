@@ -35,67 +35,62 @@ export default function HomePage() {
 function Hero() {
   return (
     <section className="relative w-full overflow-hidden">
-      {/* FULL-WIDTH GREEN WASH */}
-      <div aria-hidden className="pointer-events-none absolute inset-0">
-        {/* base wash across the whole viewport width */}
+      {/* background */}
+      <div aria-hidden className="absolute inset-0">
         <div
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse at center, rgba(16,185,129,0.40) 0%, rgba(16,185,129,0.22) 35%, rgba(16,185,129,0.12) 55%, rgba(16,185,129,0.05) 70%, rgba(255,255,255,0) 85%)",
-          }}
-        />
-
-        {/* depth + top fade */}
-        <div
-          className="absolute inset-0 blur-3xl opacity-70"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(16,185,129,0.22), rgba(16,185,129,0.10), rgba(255,255,255,0))",
+              "radial-gradient(ellipse at top, rgba(16,185,129,0.45) 0%, rgba(16,185,129,0.25) 35%, rgba(16,185,129,0.12) 60%, transparent 85%)",
           }}
         />
       </div>
 
-      {/* CENTERED CONTENT */}
-      <div className="relative mx-auto max-w10xl px-4 py-0 text-center">
-        <div className="mb-14 flex justify-center">
-          <img
-            src="/logo.svg"
-            alt="HeyMies"
-            className="h-150 w-auto md:h-200 lg:h-160"
-          />
-        </div>
+      <div className="relative mx-auto flex max-w-3xl flex-col items-center px-4 pt-20 pb-24 text-center">
+        {/* Logo */}
+        <img
+          src="/logo.svg"
+          alt="HeyMies"
+          className="mb-10 h-[280px] w-auto"
+        />
 
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-700">
-          Smart. Simple. Sorted.
-        </p>
-
-        <h1 className="mt-3 text-4xl font-semibold md:text-5xl">
+        {/* Headline */}
+        <h1 className="text-4xl font-semibold md:text-5xl">
           Intelligent automation for real estate lead generation.
         </h1>
 
-        <p className="mt-4 mx-auto max-w-2xl text-lg text-slate-700">
+        {/* Subcopy */}
+        <p className="mt-5 max-w-2xl text-lg text-slate-700">
           Stop paying for bad leads. No bloated CRM. No junk enquiries. Just buyers.
         </p>
 
-        <div className="mt-10 flex justify-center gap-3">
+        {/* CTA */}
+        <div className="mt-10 flex flex-wrap justify-center gap-4">
           <a
-            href="#join"
-            className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+            href="/signup"
+            className="rounded-xl bg-slate-900 px-7 py-3 text-sm font-semibold text-white hover:bg-slate-800"
           >
             Join HeyMies
           </a>
           <a
-            href="#how-it-works"
-            className="rounded-xl border border-slate-300 px-6 py-3 text-sm font-semibold hover:bg-slate-50"
+            href="/how-it-works"
+            className="rounded-xl border border-slate-300 px-7 py-3 text-sm font-semibold hover:bg-white/60"
           >
             See how it works
           </a>
         </div>
+
+        {/* Slogan */}
+        <p className="mt-12 text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
+          Smart. Simple. Sorted.
+        </p>
       </div>
     </section>
   );
 }
+
+
+
 
 
 
