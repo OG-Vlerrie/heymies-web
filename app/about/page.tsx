@@ -9,9 +9,26 @@ export default function AboutPage() {
 
       <Section title="What is HeyMies?" tone="blue">
         <p className="max-w-3xl text-slate-700">
-          HeyMies is a South African real estate platform that removes the noise from lead generation.
-          We qualify intent, nurture buyers, and only hand off leads when they’re ready to act.
-        </p>
+  HeyMies is a smart real estate technology platform built to help property
+  professionals focus on what actually closes deals: qualified buyers, real
+  conversations, and real momentum.
+</p>
+
+<p className="mt-4 max-w-3xl text-slate-700">
+  The South African real estate market is noisy. Agents are flooded with
+  enquiries that go nowhere, admin eats into selling time, and lead quality
+  is unpredictable. HeyMies exists to fix that.
+</p>
+
+<p className="mt-4 max-w-3xl text-slate-700">
+  We filter, score, and nurture property leads using intelligent automation,
+  then deliver ready-to-engage prospects back to agents at the right moment.
+</p>
+
+<p className="mt-6 text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
+  Smart. Simple. Sorted.
+</p>
+
       </Section>
 
       <Section title="What we do" tone="green">
