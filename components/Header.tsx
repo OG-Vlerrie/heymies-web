@@ -22,22 +22,40 @@ export default function Header() {
           <img
             src="/logo.svg"
             alt="HeyMies"
-            width={28}
-            height={28}
+            width={70}
+            height={70}
             style={{ display: "block" }}
           />
-          <span className="text-sm font-semibold">HeyMies</span>
+          <span className="text-xl font-bold tracking-tight text-emerald-700">
+  HeyMies
+</span>
+
         </Link>
 
-        {/* Nav */}
-        <nav className="hidden items-center gap-6 md:flex">
-          <Link href="/how-it-works" className={linkClass("/how-it-works")}>
-            How it works
-          </Link>
-          <Link href="/for-agents" className={linkClass("/for-agents")}>
-  For agents
-</Link>
-        </nav>
+       {/* Nav */}
+<nav className="hidden items-center gap-6 md:flex">
+  <Link href="/about" className={linkClass("/about")}>
+    About
+  </Link>
+
+  <Link href="/how-it-works" className={linkClass("/how-it-works")}>
+    How it works
+  </Link>
+
+  <Link href="/for-agents" className={linkClass("/for-agents")}>
+    For agents
+  </Link>
+
+  <Link href="/listings" className={linkClass("/listings")}>
+    Listings
+  </Link>
+
+  <Link href="/contact" className={linkClass("/contact")}>
+    Contact
+  </Link>
+</nav>
+
+
 
 
         {/* CTA */}
