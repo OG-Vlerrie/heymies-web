@@ -46,12 +46,20 @@ export default function Header() {
     For Agents
   </Link>
 
+  <Link href="/for-private-sellers" className={linkClass("/for-private-sellers")}>
+    For Private Sellers
+  </Link>
+
   <Link href="/for-buyers" className={linkClass("/for-buyers")}>
     For Buyers
   </Link>
 
   <Link href="/listings" className={linkClass("/listings")}>
     Listings
+  </Link>
+
+  <Link href="/pricing" className={linkClass("/pricing")}>
+    Pricing
   </Link>
 
   <Link href="/contact" className={linkClass("/contact")}>
