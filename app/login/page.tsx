@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 "use client";
 
 import { useMemo, useState } from "react";
@@ -130,4 +131,10 @@ export default function LoginPage() {
       </div>
     </main>
   );
+=======
+import { redirect } from "next/navigation";
+
+export default function LoginRedirect() {
+  redirect("/signup");
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 }

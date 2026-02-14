@@ -1,9 +1,13 @@
 import Link from "next/link";
+<<<<<<< HEAD
 import { createClient } from "@supabase/supabase-js";
+=======
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
 type Listing = {
   id: string;
   title: string;
+<<<<<<< HEAD
   suburb: string | null;
   city: string | null;
   price: number | null; // sale price
@@ -17,6 +21,64 @@ type Listing = {
   created_at: string;
 };
 
+=======
+  area: string;
+  city: string;
+  price: number;
+  beds: number;
+  baths: number;
+  parking: number;
+  image?: string; // optional later
+  tag?: string; // e.g. "New", "Hot", "Reduced"
+};
+
+const LISTINGS: Listing[] = [
+  {
+    id: "l-001",
+    title: "Modern 2-bed apartment",
+    area: "Sandton",
+    city: "Johannesburg",
+    price: 1899000,
+    beds: 2,
+    baths: 2,
+    parking: 1,
+    tag: "Hot",
+  },
+  {
+    id: "l-002",
+    title: "Family home with garden",
+    area: "Durbanville",
+    city: "Cape Town",
+    price: 3495000,
+    beds: 4,
+    baths: 3,
+    parking: 2,
+    tag: "New",
+  },
+  {
+    id: "l-003",
+    title: "Lock-up-and-go townhouse",
+    area: "Umhlanga",
+    city: "Durban",
+    price: 2599000,
+    beds: 3,
+    baths: 2,
+    parking: 2,
+  },
+  {
+    id: "l-004",
+    title: "Starter 1-bed near transport",
+    area: "Rosebank",
+    city: "Johannesburg",
+    price: 1299000,
+    beds: 1,
+    baths: 1,
+    parking: 1,
+    tag: "Reduced",
+  },
+];
+
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 function formatZAR(n: number) {
   return new Intl.NumberFormat("en-ZA", {
     style: "currency",
@@ -25,6 +87,7 @@ function formatZAR(n: number) {
   }).format(n);
 }
 
+<<<<<<< HEAD
 function supabasePublic() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -49,6 +112,13 @@ export default async function ListingsPage() {
     <main className="min-h-screen bg-white text-slate-900">
       <Hero />
       <Browse listings={listings} error={error?.message ?? null} />
+=======
+export default function ListingsPage() {
+  return (
+    <main className="min-h-screen bg-white text-slate-900">
+      <Hero />
+      <Browse />
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       <Footer />
     </main>
   );
@@ -86,6 +156,7 @@ function Hero() {
 
 /* ----------------------------- BROWSE ----------------------------- */
 
+<<<<<<< HEAD
 function Browse({ listings, error }: { listings: Listing[]; error: string | null }) {
   return (
     <Section title="Browse available properties" tone="blue">
@@ -96,14 +167,28 @@ function Browse({ listings, error }: { listings: Listing[]; error: string | null
       ) : null}
 
       <ListingsBrowser listings={listings} />
+=======
+function Browse() {
+  return (
+    <Section title="Browse available properties" tone="blue">
+      <ListingsBrowser />
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
     </Section>
   );
 }
 
+<<<<<<< HEAD
 function ListingsBrowser({ listings }: { listings: Listing[] }) {
   return (
     <div className="grid gap-4">
       {/* Filters are UI-only for now */}
+=======
+function ListingsBrowser() {
+  // Client-side controls without "use client" (keeps page server component friendly)
+  // If you want live filtering, we can convert just this component into a client component.
+  return (
+    <div className="grid gap-4">
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="grid gap-3 md:grid-cols-4">
           <div className="md:col-span-2">
@@ -142,6 +227,7 @@ function ListingsBrowser({ listings }: { listings: Listing[] }) {
             </select>
           </div>
         </div>
+<<<<<<< HEAD
       </div>
 
       {listings.length === 0 ? (
@@ -207,6 +293,49 @@ function ListingsBrowser({ listings }: { listings: Listing[] }) {
           })}
         </div>
       )}
+=======
+
+        <p className="mt-3 text-xs text-slate-500">
+          Filtering is UI-only right now. Next step: wire to Supabase + real data.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {LISTINGS.map((l) => (
+          <Link key={l.id} href={`/listings/${l.id}`} className="block">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 transition hover:shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold">{l.title}</h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {l.area}, {l.city}
+                  </p>
+                </div>
+                {l.tag ? (
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    {l.tag}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="mt-5 text-xl font-semibold">
+                {formatZAR(l.price)}
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-slate-600">
+                <Stat label="Beds" value={l.beds} />
+                <Stat label="Baths" value={l.baths} />
+                <Stat label="Parking" value={l.parking} />
+              </div>
+
+              <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-900">
+                View details <span aria-hidden>→</span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
     </div>
   );
 }
@@ -214,7 +343,13 @@ function ListingsBrowser({ listings }: { listings: Listing[] }) {
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+<<<<<<< HEAD
       <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+=======
+      <div className="text-[10px] uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       <div className="mt-1 font-semibold text-slate-800">{value}</div>
     </div>
   );

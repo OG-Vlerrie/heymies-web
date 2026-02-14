@@ -8,6 +8,10 @@ export default function ForAgentsPage() {
     <main className="min-h-screen bg-white text-slate-900">
       <Hero />
 
+<<<<<<< HEAD
+=======
+      {/* NEW: list-style filters */}
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       <AgentDashboard />
       <Pain />
       <Value />
@@ -29,11 +33,16 @@ function Hero() {
           className="absolute inset-0"
           style={{
             background:
+<<<<<<< HEAD
               "radial-gradient(ellipse at top, rgba(16,185,129,0.45) 0%, rgba(16,185,129,0.25) 35%, rgba(16,185,129,0.12) 60%, transparent 85%)",
+=======
+              "radial-gradient(ellipse at top, rgba(16,185,129,0.30) 0%, rgba(16,185,129,0.15) 40%, transparent 75%)",
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           }}
         />
       </div>
 
+<<<<<<< HEAD
       <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center">
         <h1 className="text-4xl font-semibold md:text-5xl">
           Built for agents, not portals
@@ -60,12 +69,35 @@ function Hero() {
         <p className="mt-12 text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
           Smart. Simple. Sorted.
         </p>
+=======
+      <div className="relative mx-auto max-w-6xl px-4 py-24">
+        <h1 className="text-4xl font-semibold md:text-5xl">
+          Built for agents, not portals
+        </h1>
+        <p className="mt-4 max-w-2xl text-lg text-slate-700">
+          HeyMies helps you stop chasing leads and start speaking to buyers who
+          are actually ready.
+        </p>
+
+        <div className="mt-8">
+          <Link
+            href="/#join"
+            className="inline-block rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+          >
+            Join HeyMies
+          </Link>
+        </div>
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       </div>
     </section>
   );
 }
 
+<<<<<<< HEAD
 /* ----------------------------- DASHBOARD ----------------------------- */
+=======
+/* ----------------------------- LIST-STYLE FILTERS ----------------------------- */
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
 function AgentDashboard() {
   type Listing = {
@@ -148,7 +180,14 @@ function AgentDashboard() {
     return rows.sort((a, b) => a.price - b.price);
   }, [city, suburb, priceKey]);
 
+<<<<<<< HEAD
   const filteredLeads = useMemo(() => [...LEADS], []);
+=======
+  const filteredLeads = useMemo(() => {
+    // For now just show all; later filter by listing selection if you want.
+    return [...LEADS];
+  }, []);
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
   const formatZAR = (n: number) =>
     new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n);
@@ -163,7 +202,12 @@ function AgentDashboard() {
 
   return (
     <section className="bg-blue-50">
+<<<<<<< HEAD
       <div className="mx-auto max-w-6xl px-4 py-16">
+=======
+      <div className="mx-auto max-w-6xl px-4 py-14">
+        {/* Agent header */}
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-2xl font-semibold">Agent Dashboard</h2>
@@ -181,7 +225,11 @@ function AgentDashboard() {
           <div className="flex gap-2">
             <button
               type="button"
+<<<<<<< HEAD
               className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-white/60"
+=======
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-white/70"
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
               onClick={() => alert("Next: add listing flow")}
             >
               Add listing
@@ -196,13 +244,22 @@ function AgentDashboard() {
           </div>
         </div>
 
+<<<<<<< HEAD
         <div className="mt-8 grid gap-4 md:grid-cols-4">
+=======
+        {/* KPI strip */}
+        <div className="mt-8 grid gap-3 md:grid-cols-4">
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           <Kpi label="Listings" value={kpi.totalListings} />
           <Kpi label="Leads" value={kpi.totalLeads} />
           <Kpi label="Ready" value={kpi.ready} />
           <Kpi label="Nurturing" value={kpi.nurturing} />
         </div>
 
+<<<<<<< HEAD
+=======
+        {/* Tabs */}
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <TabButton active={tab === "listings"} onClick={() => setTab("listings")}>
             Your Listings
@@ -212,7 +269,12 @@ function AgentDashboard() {
           </TabButton>
         </div>
 
+<<<<<<< HEAD
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+=======
+        {/* Content */}
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           {tab === "listings" ? (
             <>
               <div className="grid gap-6 md:grid-cols-3">
@@ -354,7 +416,11 @@ function stageClass(stage: string) {
 
 function Kpi({ label, value }: { label: string; value: number }) {
   return (
+<<<<<<< HEAD
     <div className="rounded-xl border border-slate-200 bg-white p-5">
+=======
+    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       <div className="text-xs font-semibold text-slate-600">{label}</div>
       <div className="mt-2 text-2xl font-semibold">{value}</div>
     </div>
@@ -385,13 +451,25 @@ function TabButton({
   );
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 /* ----------------------------- PAIN ----------------------------- */
 
 function Pain() {
   return (
+<<<<<<< HEAD
     <section className="bg-blue-50">
       <div className="mx-auto max-w-6xl px-4 py-20">
         <h2 className="text-2xl font-semibold">The problem agents live with every day</h2>
+=======
+    <section className="bg-slate-50">
+      <div className="mx-auto max-w-6xl px-4 py-20">
+        <h2 className="text-2xl font-semibold">
+          The problem agents live with every day
+        </h2>
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
         <ul className="mt-8 space-y-3 text-slate-700">
           <li>• Paying for leads that never answer</li>
@@ -400,7 +478,13 @@ function Pain() {
           <li>• Carrying all the risk</li>
         </ul>
 
+<<<<<<< HEAD
         <p className="mt-6 font-semibold">More leads don’t solve this. Better leads do.</p>
+=======
+        <p className="mt-6 font-semibold">
+          More leads don’t solve this. Better leads do.
+        </p>
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       </div>
     </section>
   );
@@ -410,6 +494,7 @@ function Pain() {
 
 function Value() {
   return (
+<<<<<<< HEAD
     <section className="bg-white">
       <div className="mx-auto max-w-6xl px-4 py-20">
         <h2 className="text-2xl font-semibold">What HeyMies does differently</h2>
@@ -419,6 +504,20 @@ function Value() {
             <strong>Qualification first</strong>
             <p className="mt-2 text-sm text-slate-700">
               Leads are scored based on behaviour, engagement, and intent — not just a form fill.
+=======
+    <section>
+      <div className="mx-auto max-w-6xl px-4 py-20">
+        <h2 className="text-2xl font-semibold">
+          What HeyMies does differently
+        </h2>
+
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <Card>
+            <strong>Qualification first</strong>
+            <p className="mt-2 text-sm text-slate-700">
+              Leads are scored based on behaviour, engagement, and intent — not
+              just a form fill.
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
             </p>
           </Card>
 
@@ -464,11 +563,21 @@ function HowItHelps() {
 
 function Comparison() {
   return (
+<<<<<<< HEAD
     <section className="bg-white">
       <div className="mx-auto max-w-6xl px-4 py-20">
         <h2 className="text-2xl font-semibold">Traditional portals vs HeyMies</h2>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
+=======
+    <section>
+      <div className="mx-auto max-w-6xl px-4 py-20">
+        <h2 className="text-2xl font-semibold">
+          Traditional portals vs HeyMies
+        </h2>
+
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           <Card>
             <strong>Traditional portals</strong>
             <ul className="mt-3 space-y-2 text-sm text-slate-700">
@@ -501,12 +610,22 @@ function FinalCTA() {
     <section className="bg-slate-900 px-4 py-20 text-white">
       <div className="mx-auto max-w-6xl">
         <h2 className="text-3xl font-semibold">Stop chasing. Start closing.</h2>
+<<<<<<< HEAD
         <p className="mt-3 text-slate-300">Early access for agents who value their time.</p>
+=======
+        <p className="mt-3 text-slate-300">
+          Early access for agents who value their time.
+        </p>
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
         <div className="mt-8">
           <Link
             href="/#join"
+<<<<<<< HEAD
             className="inline-block rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+=======
+            className="inline-block rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           >
             Join HeyMies
           </Link>
@@ -529,7 +648,11 @@ function Footer() {
 /* ----------------------------- UI ----------------------------- */
 
 function Card({ children }: { children: React.ReactNode }) {
+<<<<<<< HEAD
   return <div className="rounded-xl border border-slate-200 bg-white p-5">{children}</div>;
+=======
+  return <div className="rounded-xl border bg-white p-6">{children}</div>;
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 }
 
 function Benefit({ children }: { children: React.ReactNode }) {

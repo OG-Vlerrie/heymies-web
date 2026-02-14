@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+<<<<<<< HEAD
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -22,6 +23,12 @@ export default function Header() {
   // Join dropdown
   const [joinOpen, setJoinOpen] = useState(false);
   const joinMenuRef = useRef<HTMLDivElement | null>(null);
+=======
+import { usePathname } from "next/navigation";
+
+export default function Header() {
+  const pathname = usePathname();
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
   const linkClass = (href: string) =>
     `text-sm transition ${
@@ -30,6 +37,7 @@ export default function Header() {
         : "text-slate-600 hover:text-slate-900"
     }`;
 
+<<<<<<< HEAD
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -185,6 +193,74 @@ export default function Header() {
             </div>
           )}
         </div>
+=======
+  return (
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2">
+          <img
+            src="/logo.svg"
+            alt="HeyMies"
+            width={70}
+            height={70}
+            style={{ display: "block" }}
+          />
+          <span className="text-xl font-bold tracking-tight text-emerald-700">
+  HeyMies
+</span>
+
+        </Link>
+
+       {/* Nav */}
+<nav className="hidden items-center gap-6 md:flex">
+  <Link href="/about" className={linkClass("/about")}>
+    About
+  </Link>
+
+  <Link href="/how-it-works" className={linkClass("/how-it-works")}>
+    How it works
+  </Link>
+
+  <Link href="/for-agents" className={linkClass("/for-agents")}>
+    For Agents
+  </Link>
+
+  <Link href="/for-private-sellers" className={linkClass("/for-private-sellers")}>
+    For Private Sellers
+  </Link>
+
+  <Link href="/for-buyers" className={linkClass("/for-buyers")}>
+    For Buyers
+  </Link>
+
+  <Link href="/listings" className={linkClass("/listings")}>
+    Listings
+  </Link>
+
+  <Link href="/pricing" className={linkClass("/pricing")}>
+    Pricing
+  </Link>
+
+  <Link href="/contact" className={linkClass("/contact")}>
+    Contact
+  </Link>
+</nav>
+
+
+
+
+        {/* CTA */}
+        <Link
+  href="/signup"
+  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+>
+  Join HeyMies
+</Link>
+
+
+>>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       </div>
     </header>
   );
