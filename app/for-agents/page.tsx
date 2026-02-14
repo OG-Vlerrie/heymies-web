@@ -7,11 +7,6 @@ export default function ForAgentsPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <Hero />
-
-<<<<<<< HEAD
-=======
-      {/* NEW: list-style filters */}
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       <AgentDashboard />
       <Pain />
       <Value />
@@ -33,22 +28,18 @@ function Hero() {
           className="absolute inset-0"
           style={{
             background:
-<<<<<<< HEAD
               "radial-gradient(ellipse at top, rgba(16,185,129,0.45) 0%, rgba(16,185,129,0.25) 35%, rgba(16,185,129,0.12) 60%, transparent 85%)",
-=======
-              "radial-gradient(ellipse at top, rgba(16,185,129,0.30) 0%, rgba(16,185,129,0.15) 40%, transparent 75%)",
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           }}
         />
       </div>
 
-<<<<<<< HEAD
       <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center">
         <h1 className="text-4xl font-semibold md:text-5xl">
           Built for agents, not portals
         </h1>
         <p className="mt-5 max-w-2xl text-lg text-slate-700">
-          HeyMies helps you stop chasing leads and start speaking to buyers who are actually ready.
+          HeyMies helps you stop chasing leads and start speaking to buyers who
+          are actually ready.
         </p>
 
         <div className="mt-10 flex flex-wrap justify-center gap-4">
@@ -69,35 +60,12 @@ function Hero() {
         <p className="mt-12 text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
           Smart. Simple. Sorted.
         </p>
-=======
-      <div className="relative mx-auto max-w-6xl px-4 py-24">
-        <h1 className="text-4xl font-semibold md:text-5xl">
-          Built for agents, not portals
-        </h1>
-        <p className="mt-4 max-w-2xl text-lg text-slate-700">
-          HeyMies helps you stop chasing leads and start speaking to buyers who
-          are actually ready.
-        </p>
-
-        <div className="mt-8">
-          <Link
-            href="/#join"
-            className="inline-block rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            Join HeyMies
-          </Link>
-        </div>
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       </div>
     </section>
   );
 }
 
-<<<<<<< HEAD
 /* ----------------------------- DASHBOARD ----------------------------- */
-=======
-/* ----------------------------- LIST-STYLE FILTERS ----------------------------- */
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
 function AgentDashboard() {
   type Listing = {
@@ -126,18 +94,75 @@ function AgentDashboard() {
   };
 
   const LISTINGS: Listing[] = [
-    { id: "l1", title: "Modern 2-bed apartment", city: "Johannesburg", suburb: "Sandton", price: 1899000 },
-    { id: "l2", title: "1-bed investor unit", city: "Johannesburg", suburb: "Rosebank", price: 1299000 },
-    { id: "l3", title: "Family home with garden", city: "Cape Town", suburb: "Gardens", price: 3495000 },
-    { id: "l4", title: "Sea-facing apartment", city: "Cape Town", suburb: "Sea Point", price: 5250000 },
-    { id: "l5", title: "Lock-up-and-go townhouse", city: "Durban", suburb: "Umhlanga", price: 2599000 },
-    { id: "l6", title: "Starter apartment near transport", city: "Pretoria", suburb: "Hatfield", price: 995000 },
+    {
+      id: "l1",
+      title: "Modern 2-bed apartment",
+      city: "Johannesburg",
+      suburb: "Sandton",
+      price: 1899000,
+    },
+    {
+      id: "l2",
+      title: "1-bed investor unit",
+      city: "Johannesburg",
+      suburb: "Rosebank",
+      price: 1299000,
+    },
+    {
+      id: "l3",
+      title: "Family home with garden",
+      city: "Cape Town",
+      suburb: "Gardens",
+      price: 3495000,
+    },
+    {
+      id: "l4",
+      title: "Sea-facing apartment",
+      city: "Cape Town",
+      suburb: "Sea Point",
+      price: 5250000,
+    },
+    {
+      id: "l5",
+      title: "Lock-up-and-go townhouse",
+      city: "Durban",
+      suburb: "Umhlanga",
+      price: 2599000,
+    },
+    {
+      id: "l6",
+      title: "Starter apartment near transport",
+      city: "Pretoria",
+      suburb: "Hatfield",
+      price: 995000,
+    },
   ];
 
   const LEADS: Lead[] = [
-    { id: "ld1", name: "Thabo M.", listingId: "l1", listingTitle: "Modern 2-bed apartment", stage: "New", lastContact: "2026-02-06" },
-    { id: "ld2", name: "Samantha K.", listingId: "l5", listingTitle: "Lock-up-and-go townhouse", stage: "Nurturing", lastContact: "2026-02-05" },
-    { id: "ld3", name: "Ayesha R.", listingId: "l3", listingTitle: "Family home with garden", stage: "Ready", lastContact: "2026-02-07" },
+    {
+      id: "ld1",
+      name: "Thabo M.",
+      listingId: "l1",
+      listingTitle: "Modern 2-bed apartment",
+      stage: "New",
+      lastContact: "2026-02-06",
+    },
+    {
+      id: "ld2",
+      name: "Samantha K.",
+      listingId: "l5",
+      listingTitle: "Lock-up-and-go townhouse",
+      stage: "Nurturing",
+      lastContact: "2026-02-05",
+    },
+    {
+      id: "ld3",
+      name: "Ayesha R.",
+      listingId: "l3",
+      listingTitle: "Family home with garden",
+      stage: "Ready",
+      lastContact: "2026-02-07",
+    },
     { id: "ld4", name: "Johan P.", stage: "Closed", lastContact: "2026-02-01" },
   ];
 
@@ -180,17 +205,14 @@ function AgentDashboard() {
     return rows.sort((a, b) => a.price - b.price);
   }, [city, suburb, priceKey]);
 
-<<<<<<< HEAD
   const filteredLeads = useMemo(() => [...LEADS], []);
-=======
-  const filteredLeads = useMemo(() => {
-    // For now just show all; later filter by listing selection if you want.
-    return [...LEADS];
-  }, []);
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
   const formatZAR = (n: number) =>
-    new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n);
+    new Intl.NumberFormat("en-ZA", {
+      style: "currency",
+      currency: "ZAR",
+      maximumFractionDigits: 0,
+    }).format(n);
 
   const kpi = useMemo(() => {
     const totalListings = LISTINGS.length;
@@ -202,12 +224,7 @@ function AgentDashboard() {
 
   return (
     <section className="bg-blue-50">
-<<<<<<< HEAD
       <div className="mx-auto max-w-6xl px-4 py-16">
-=======
-      <div className="mx-auto max-w-6xl px-4 py-14">
-        {/* Agent header */}
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-2xl font-semibold">Agent Dashboard</h2>
@@ -225,11 +242,7 @@ function AgentDashboard() {
           <div className="flex gap-2">
             <button
               type="button"
-<<<<<<< HEAD
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-white/60"
-=======
               className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-white/70"
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
               onClick={() => alert("Next: add listing flow")}
             >
               Add listing
@@ -244,22 +257,13 @@ function AgentDashboard() {
           </div>
         </div>
 
-<<<<<<< HEAD
-        <div className="mt-8 grid gap-4 md:grid-cols-4">
-=======
-        {/* KPI strip */}
         <div className="mt-8 grid gap-3 md:grid-cols-4">
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           <Kpi label="Listings" value={kpi.totalListings} />
           <Kpi label="Leads" value={kpi.totalLeads} />
           <Kpi label="Ready" value={kpi.ready} />
           <Kpi label="Nurturing" value={kpi.nurturing} />
         </div>
 
-<<<<<<< HEAD
-=======
-        {/* Tabs */}
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <TabButton active={tab === "listings"} onClick={() => setTab("listings")}>
             Your Listings
@@ -269,17 +273,14 @@ function AgentDashboard() {
           </TabButton>
         </div>
 
-<<<<<<< HEAD
-        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-=======
-        {/* Content */}
         <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           {tab === "listings" ? (
             <>
               <div className="grid gap-6 md:grid-cols-3">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700">City / Town</label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    City / Town
+                  </label>
                   <select
                     className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm"
                     value={city}
@@ -299,7 +300,9 @@ function AgentDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700">Suburb</label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Suburb
+                  </label>
                   <select
                     className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm"
                     value={suburb}
@@ -309,7 +312,9 @@ function AgentDashboard() {
                     }}
                     disabled={!city}
                   >
-                    <option value="">{city ? "Select suburb" : "Select city first"}</option>
+                    <option value="">
+                      {city ? "Select suburb" : "Select city first"}
+                    </option>
                     {suburbs.map((s) => (
                       <option key={s} value={s}>
                         {s}
@@ -319,7 +324,9 @@ function AgentDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700">Price range</label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Price range
+                  </label>
                   <select
                     className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm"
                     value={priceKey}
@@ -350,22 +357,31 @@ function AgentDashboard() {
                 <div className="mt-8">
                   <div className="flex items-end justify-between">
                     <h3 className="text-lg font-semibold">Listings in selection</h3>
-                    <div className="text-sm text-slate-600">{filteredListings.length} listing(s)</div>
+                    <div className="text-sm text-slate-600">
+                      {filteredListings.length} listing(s)
+                    </div>
                   </div>
 
                   {filteredListings.length === 0 ? (
-                    <p className="mt-4 text-sm text-slate-600">No listings match that selection.</p>
+                    <p className="mt-4 text-sm text-slate-600">
+                      No listings match that selection.
+                    </p>
                   ) : (
                     <ul className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200">
                       {filteredListings.map((l) => (
-                        <li key={l.id} className="flex items-center justify-between gap-4 px-4 py-4">
+                        <li
+                          key={l.id}
+                          className="flex items-center justify-between gap-4 px-4 py-4"
+                        >
                           <div className="min-w-0">
                             <div className="truncate font-semibold">{l.title}</div>
                             <div className="mt-1 text-sm text-slate-600">
                               {l.suburb}, {l.city}
                             </div>
                           </div>
-                          <div className="shrink-0 text-sm font-semibold text-slate-900">{formatZAR(l.price)}</div>
+                          <div className="shrink-0 text-sm font-semibold text-slate-900">
+                            {formatZAR(l.price)}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -373,7 +389,8 @@ function AgentDashboard() {
                 </div>
               ) : (
                 <p className="mt-6 text-sm text-slate-600">
-                  Select City → Suburb → Price, then click <span className="font-semibold">Apply filters</span>.
+                  Select City → Suburb → Price, then click{" "}
+                  <span className="font-semibold">Apply filters</span>.
                 </p>
               )}
             </>
@@ -381,19 +398,29 @@ function AgentDashboard() {
             <>
               <div className="flex items-end justify-between">
                 <h3 className="text-lg font-semibold">Your Leads</h3>
-                <div className="text-sm text-slate-600">{filteredLeads.length} lead(s)</div>
+                <div className="text-sm text-slate-600">
+                  {filteredLeads.length} lead(s)
+                </div>
               </div>
 
               <ul className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200">
                 {filteredLeads.map((l) => (
-                  <li key={l.id} className="flex flex-col gap-1 px-4 py-4 md:flex-row md:items-center md:justify-between">
+                  <li
+                    key={l.id}
+                    className="flex flex-col gap-1 px-4 py-4 md:flex-row md:items-center md:justify-between"
+                  >
                     <div className="min-w-0">
                       <div className="truncate font-semibold">{l.name}</div>
                       <div className="mt-1 text-sm text-slate-600">
-                        {l.listingTitle ? l.listingTitle : "No listing linked"} • Last contact: {l.lastContact}
+                        {l.listingTitle ? l.listingTitle : "No listing linked"} •
+                        Last contact: {l.lastContact}
                       </div>
                     </div>
-                    <span className={`mt-2 inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${stageClass(l.stage)}`}>
+                    <span
+                      className={`mt-2 inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${stageClass(
+                        l.stage
+                      )}`}
+                    >
                       {l.stage}
                     </span>
                   </li>
@@ -416,11 +443,7 @@ function stageClass(stage: string) {
 
 function Kpi({ label, value }: { label: string; value: number }) {
   return (
-<<<<<<< HEAD
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-=======
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       <div className="text-xs font-semibold text-slate-600">{label}</div>
       <div className="mt-2 text-2xl font-semibold">{value}</div>
     </div>
@@ -443,7 +466,7 @@ function TabButton({
       className={
         active
           ? "rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          : "rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-white/60"
+          : "rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-white/70"
       }
     >
       {children}
@@ -451,25 +474,15 @@ function TabButton({
   );
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 /* ----------------------------- PAIN ----------------------------- */
 
 function Pain() {
   return (
-<<<<<<< HEAD
-    <section className="bg-blue-50">
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-2xl font-semibold">The problem agents live with every day</h2>
-=======
     <section className="bg-slate-50">
       <div className="mx-auto max-w-6xl px-4 py-20">
         <h2 className="text-2xl font-semibold">
           The problem agents live with every day
         </h2>
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
         <ul className="mt-8 space-y-3 text-slate-700">
           <li>• Paying for leads that never answer</li>
@@ -478,13 +491,9 @@ function Pain() {
           <li>• Carrying all the risk</li>
         </ul>
 
-<<<<<<< HEAD
-        <p className="mt-6 font-semibold">More leads don’t solve this. Better leads do.</p>
-=======
         <p className="mt-6 font-semibold">
           More leads don’t solve this. Better leads do.
         </p>
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       </div>
     </section>
   );
@@ -494,22 +503,9 @@ function Pain() {
 
 function Value() {
   return (
-<<<<<<< HEAD
-    <section className="bg-white">
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-2xl font-semibold">What HeyMies does differently</h2>
-
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          <Card>
-            <strong>Qualification first</strong>
-            <p className="mt-2 text-sm text-slate-700">
-              Leads are scored based on behaviour, engagement, and intent — not just a form fill.
-=======
     <section>
       <div className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-2xl font-semibold">
-          What HeyMies does differently
-        </h2>
+        <h2 className="text-2xl font-semibold">What HeyMies does differently</h2>
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           <Card>
@@ -517,7 +513,6 @@ function Value() {
             <p className="mt-2 text-sm text-slate-700">
               Leads are scored based on behaviour, engagement, and intent — not
               just a form fill.
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
             </p>
           </Card>
 
@@ -563,21 +558,11 @@ function HowItHelps() {
 
 function Comparison() {
   return (
-<<<<<<< HEAD
-    <section className="bg-white">
+    <section>
       <div className="mx-auto max-w-6xl px-4 py-20">
         <h2 className="text-2xl font-semibold">Traditional portals vs HeyMies</h2>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-=======
-    <section>
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-2xl font-semibold">
-          Traditional portals vs HeyMies
-        </h2>
-
         <div className="mt-8 grid gap-6 md:grid-cols-2">
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           <Card>
             <strong>Traditional portals</strong>
             <ul className="mt-3 space-y-2 text-sm text-slate-700">
@@ -610,22 +595,14 @@ function FinalCTA() {
     <section className="bg-slate-900 px-4 py-20 text-white">
       <div className="mx-auto max-w-6xl">
         <h2 className="text-3xl font-semibold">Stop chasing. Start closing.</h2>
-<<<<<<< HEAD
-        <p className="mt-3 text-slate-300">Early access for agents who value their time.</p>
-=======
         <p className="mt-3 text-slate-300">
           Early access for agents who value their time.
         </p>
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
         <div className="mt-8">
           <Link
             href="/#join"
-<<<<<<< HEAD
             className="inline-block rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-100"
-=======
-            className="inline-block rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
           >
             Join HeyMies
           </Link>
@@ -640,7 +617,9 @@ function FinalCTA() {
 function Footer() {
   return (
     <footer className="border-t px-4 py-10 text-sm text-slate-600">
-      <div className="mx-auto max-w-6xl">© {new Date().getFullYear()} HeyMies</div>
+      <div className="mx-auto max-w-6xl">
+        © {new Date().getFullYear()} HeyMies
+      </div>
     </footer>
   );
 }
@@ -648,11 +627,11 @@ function Footer() {
 /* ----------------------------- UI ----------------------------- */
 
 function Card({ children }: { children: React.ReactNode }) {
-<<<<<<< HEAD
-  return <div className="rounded-xl border border-slate-200 bg-white p-5">{children}</div>;
-=======
-  return <div className="rounded-xl border bg-white p-6">{children}</div>;
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+      {children}
+    </div>
+  );
 }
 
 function Benefit({ children }: { children: React.ReactNode }) {

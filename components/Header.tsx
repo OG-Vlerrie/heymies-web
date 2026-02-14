@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-<<<<<<< HEAD
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -23,12 +22,6 @@ export default function Header() {
   // Join dropdown
   const [joinOpen, setJoinOpen] = useState(false);
   const joinMenuRef = useRef<HTMLDivElement | null>(null);
-=======
-import { usePathname } from "next/navigation";
-
-export default function Header() {
-  const pathname = usePathname();
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 
   const linkClass = (href: string) =>
     `text-sm transition ${
@@ -37,7 +30,6 @@ export default function Header() {
         : "text-slate-600 hover:text-slate-900"
     }`;
 
-<<<<<<< HEAD
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -45,10 +37,12 @@ export default function Header() {
       setLoading(false);
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setLoggedIn(!!session?.user);
-      setLoading(false);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setLoggedIn(!!session?.user);
+        setLoading(false);
+      }
+    );
 
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
@@ -59,7 +53,8 @@ export default function Header() {
       const t = e.target as Node;
 
       if (menuRef.current && !menuRef.current.contains(t)) setOpen(false);
-      if (joinMenuRef.current && !joinMenuRef.current.contains(t)) setJoinOpen(false);
+      if (joinMenuRef.current && !joinMenuRef.current.contains(t))
+        setJoinOpen(false);
     }
 
     document.addEventListener("mousedown", onClickOutside);
@@ -80,7 +75,13 @@ export default function Header() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.svg" alt="HeyMies" width={70} height={70} />
+          <img
+            src="/logo.svg"
+            alt="HeyMies"
+            width={70}
+            height={70}
+            style={{ display: "block" }}
+          />
           <span className="text-xl font-bold tracking-tight text-emerald-700">
             HeyMies
           </span>
@@ -88,20 +89,39 @@ export default function Header() {
 
         {/* Nav */}
         <nav className="hidden items-center gap-6 md:flex">
-          <Link href="/about" className={linkClass("/about")}>About</Link>
-          <Link href="/how-it-works" className={linkClass("/how-it-works")}>How it works</Link>
-          <Link href="/for-agents" className={linkClass("/for-agents")}>For Agents</Link>
-          <Link href="/for-private-sellers" className={linkClass("/for-private-sellers")}>For Private Sellers</Link>
-          <Link href="/for-buyers" className={linkClass("/for-buyers")}>For Buyers</Link>
-          <Link href="/listings" className={linkClass("/listings")}>Listings</Link>
-          <Link href="/pricing" className={linkClass("/pricing")}>Pricing</Link>
-          <Link href="/contact" className={linkClass("/contact")}>Contact</Link>
+          <Link href="/about" className={linkClass("/about")}>
+            About
+          </Link>
+          <Link href="/how-it-works" className={linkClass("/how-it-works")}>
+            How it works
+          </Link>
+          <Link href="/for-agents" className={linkClass("/for-agents")}>
+            For Agents
+          </Link>
+          <Link
+            href="/for-private-sellers"
+            className={linkClass("/for-private-sellers")}
+          >
+            For Private Sellers
+          </Link>
+          <Link href="/for-buyers" className={linkClass("/for-buyers")}>
+            For Buyers
+          </Link>
+          <Link href="/listings" className={linkClass("/listings")}>
+            Listings
+          </Link>
+          <Link href="/pricing" className={linkClass("/pricing")}>
+            Pricing
+          </Link>
+          <Link href="/contact" className={linkClass("/contact")}>
+            Contact
+          </Link>
         </nav>
 
         {/* Right side */}
         <div className="flex items-center gap-3">
           {/* Login dropdown (only when NOT logged in) */}
-          {!loggedIn && (
+          {!loading && !loggedIn && (
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -115,7 +135,7 @@ export default function Header() {
               </button>
 
               {open && (
-                <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-emerald-200 bg-white shadow-lg text-slate-900">
+                <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-emerald-200 bg-white text-slate-900 shadow-lg">
                   <Link
                     href={loginHref("agent")}
                     className="block px-4 py-3 text-sm hover:bg-emerald-50"
@@ -142,125 +162,64 @@ export default function Header() {
             </div>
           )}
 
-          {loading ? null : loggedIn ? (
+          {!loading && loggedIn ? (
             <>
-              <Link href="/dashboard" className="rounded-xl border px-4 py-2 text-sm">
+              <Link
+                href="/dashboard"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50"
+              >
                 Dashboard
               </Link>
-              <button onClick={logout} className="text-sm text-red-600">
+              <button
+                onClick={logout}
+                className="rounded-xl px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+              >
                 Logout
               </button>
             </>
           ) : (
-            // Join HeyMies dropdown (when NOT logged in)
-            <div className="relative" ref={joinMenuRef}>
-              <button
-                type="button"
-                className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                onClick={() => {
-                  setOpen(false);
-                  setJoinOpen((v) => !v);
-                }}
-              >
-                Join HeyMies
-              </button>
+            !loading && (
+              <div className="relative" ref={joinMenuRef}>
+                <button
+                  type="button"
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  onClick={() => {
+                    setOpen(false);
+                    setJoinOpen((v) => !v);
+                  }}
+                >
+                  Join HeyMies
+                </button>
 
-              {joinOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white shadow-lg text-slate-900">
-                  <Link
-                    href="/signup/agent"
-                    className="block px-4 py-3 text-sm hover:bg-slate-50"
-                    onClick={() => setJoinOpen(false)}
-                  >
-                    Agent
-                  </Link>
-                  <Link
-                    href="/signup/private-seller"
-                    className="block px-4 py-3 text-sm hover:bg-slate-50"
-                    onClick={() => setJoinOpen(false)}
-                  >
-                    Private Seller
-                  </Link>
-                  <Link
-                    href="/signup/buyer"
-                    className="block px-4 py-3 text-sm hover:bg-slate-50"
-                    onClick={() => setJoinOpen(false)}
-                  >
-                    Buyer
-                  </Link>
-                </div>
-              )}
-            </div>
+                {joinOpen && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-lg">
+                    <Link
+                      href="/signup/agent"
+                      className="block px-4 py-3 text-sm hover:bg-slate-50"
+                      onClick={() => setJoinOpen(false)}
+                    >
+                      Agent
+                    </Link>
+                    <Link
+                      href="/signup/private-seller"
+                      className="block px-4 py-3 text-sm hover:bg-slate-50"
+                      onClick={() => setJoinOpen(false)}
+                    >
+                      Private Seller
+                    </Link>
+                    <Link
+                      href="/signup/buyer"
+                      className="block px-4 py-3 text-sm hover:bg-slate-50"
+                      onClick={() => setJoinOpen(false)}
+                    >
+                      Buyer
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )
           )}
         </div>
-=======
-  return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <img
-            src="/logo.svg"
-            alt="HeyMies"
-            width={70}
-            height={70}
-            style={{ display: "block" }}
-          />
-          <span className="text-xl font-bold tracking-tight text-emerald-700">
-  HeyMies
-</span>
-
-        </Link>
-
-       {/* Nav */}
-<nav className="hidden items-center gap-6 md:flex">
-  <Link href="/about" className={linkClass("/about")}>
-    About
-  </Link>
-
-  <Link href="/how-it-works" className={linkClass("/how-it-works")}>
-    How it works
-  </Link>
-
-  <Link href="/for-agents" className={linkClass("/for-agents")}>
-    For Agents
-  </Link>
-
-  <Link href="/for-private-sellers" className={linkClass("/for-private-sellers")}>
-    For Private Sellers
-  </Link>
-
-  <Link href="/for-buyers" className={linkClass("/for-buyers")}>
-    For Buyers
-  </Link>
-
-  <Link href="/listings" className={linkClass("/listings")}>
-    Listings
-  </Link>
-
-  <Link href="/pricing" className={linkClass("/pricing")}>
-    Pricing
-  </Link>
-
-  <Link href="/contact" className={linkClass("/contact")}>
-    Contact
-  </Link>
-</nav>
-
-
-
-
-        {/* CTA */}
-        <Link
-  href="/signup"
-  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
->
-  Join HeyMies
-</Link>
-
-
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
       </div>
     </header>
   );

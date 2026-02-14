@@ -1,14 +1,16 @@
-<<<<<<< HEAD
 "use client";
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
+type SignupRole = "agent" | "private-seller" | "buyer";
+
 export default function LoginPage() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next");
+
   const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [email, setEmail] = useState("");
@@ -16,17 +18,21 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [signupRole, setSignupRole] = useState<"agent" | "private-seller" | "buyer">("agent");
+  const [signupRole, setSignupRole] = useState<SignupRole>("agent");
 
   async function onLogin() {
     setError(null);
     setLoading(true);
 
-    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: authErr } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (authErr) {
       setLoading(false);
-      return setError(authErr.message);
+      setError(authErr.message);
+      return;
     }
 
     if (next) {
@@ -37,27 +43,36 @@ export default function LoginPage() {
 
     const {
       data: { user },
+      error: userErr,
     } = await supabase.auth.getUser();
 
-    const uid = user?.id;
-
-    if (!uid) {
+    if (userErr) {
       setLoading(false);
-      return setError("Logged in but no user returned.");
+      setError(userErr.message);
+      return;
     }
 
+    const uid = user?.id;
+    if (!uid) {
+      setLoading(false);
+      setError("Logged in but no user returned.");
+      return;
+    }
+
+    // Optional: keep for later role-based redirect, but don't block login if profile missing
     const { data: profile, error: profErr } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", uid)
       .single();
 
+    setLoading(false);
+
     if (profErr || !profile) {
-      setLoading(false);
-      return setError(profErr?.message ?? "Missing profile.");
+      router.push("/dashboard");
+      return;
     }
 
-    setLoading(false);
     router.push("/dashboard");
   }
 
@@ -70,7 +85,9 @@ export default function LoginPage() {
       <div className="mx-auto max-w-md px-4 py-16">
         <div className="rounded-xl border border-slate-200 bg-white p-6">
           <h1 className="text-2xl font-semibold">Log in</h1>
-          <p className="mt-2 text-sm text-slate-700">Welcome back. Enter your details to continue.</p>
+          <p className="mt-2 text-sm text-slate-700">
+            Welcome back. Enter your details to continue.
+          </p>
 
           <div className="mt-6 space-y-3">
             <input
@@ -78,6 +95,7 @@ export default function LoginPage() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
 
             <input
@@ -86,6 +104,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
             />
 
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -93,20 +112,20 @@ export default function LoginPage() {
             <button
               className="w-full rounded-xl bg-slate-900 p-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
               onClick={onLogin}
-              disabled={loading}
+              disabled={loading || !email || !password}
             >
               {loading ? "Signing in..." : "Log in"}
             </button>
 
             {/* Signup dropdown */}
             <div className="pt-2">
-              <p className="text-sm text-slate-600">No account? Please select one.</p>
+              <p className="text-sm text-slate-600">No account? Select a role.</p>
 
               <div className="mt-2 flex gap-2">
                 <select
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                   value={signupRole}
-                  onChange={(e) => setSignupRole(e.target.value as typeof signupRole)}
+                  onChange={(e) => setSignupRole(e.target.value as SignupRole)}
                 >
                   <option value="agent">Agent</option>
                   <option value="private-seller">Private Seller</option>
@@ -131,10 +150,4 @@ export default function LoginPage() {
       </div>
     </main>
   );
-=======
-import { redirect } from "next/navigation";
-
-export default function LoginRedirect() {
-  redirect("/signup");
->>>>>>> de317c9451e18b44415fb345ed03f23a18805a36
 }
