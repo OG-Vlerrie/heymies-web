@@ -9,48 +9,74 @@ export async function POST(req: Request) {
     const source = (body?.source ?? "website").toString();
 
     if (!email || !email.includes("@")) {
-      return NextResponse.json({ ok: false, error: "Invalid email" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Invalid email" },
+        { status: 400 }
+      );
     }
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false } }
-    );
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      return NextResponse.json(
+        { ok: false, error: "Server misconfigured (Supabase env missing)" },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { persistSession: false },
+    });
 
     const { error: dbError } = await supabase
       .from("leads")
       .upsert({ email, source }, { onConflict: "email" });
 
     if (dbError) {
-      return NextResponse.json({ ok: false, error: "DB error" }, { status: 500 });
+      return NextResponse.json(
+        { ok: false, error: "DB error" },
+        { status: 500 }
+      );
     }
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const from = process.env.EMAIL_FROM!;
-    const notifyTo = process.env.LEAD_NOTIFY_TO!;
+    // Only send emails if all envs exist
+    if (
+      process.env.RESEND_API_KEY &&
+      process.env.EMAIL_FROM &&
+      process.env.LEAD_NOTIFY_TO
+    ) {
+      const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // Notify you
-    await resend.emails.send({
-      from,
-      to: [notifyTo],
-      subject: "New HeyMies early-access lead",
-      html: `<p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Source:</strong> ${escapeHtml(
-        source
-      )}</p>`,
-    });
+      // Notify you
+      await resend.emails.send({
+        from: process.env.EMAIL_FROM,
+        to: [process.env.LEAD_NOTIFY_TO],
+        subject: "New HeyMies early-access lead",
+        html: `
+          <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+          <p><strong>Source:</strong> ${escapeHtml(source)}</p>
+        `,
+      });
 
-    // Optional: confirmation email to the lead
-    await resend.emails.send({
-      from,
-      to: [email],
-      subject: "You’re on the HeyMies early access list",
-      html: `<p>Thanks — you’re on the list. We’ll email you when onboarding opens.</p><p><strong>HeyMies</strong></p>`,
-    });
+      // Confirmation email to the lead
+      await resend.emails.send({
+        from: process.env.EMAIL_FROM,
+        to: [email],
+        subject: "You’re on the HeyMies early access list",
+        html: `
+          <p>Thanks — you’re on the list. We’ll email you when onboarding opens.</p>
+          <p><strong>HeyMies</strong></p>
+        `,
+      });
+    }
 
     return NextResponse.json({ ok: true });
   } catch {
-    return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
+    return NextResponse.json(
+      { ok: false, error: "Bad request" },
+      { status: 400 }
+    );
   }
 }
 
