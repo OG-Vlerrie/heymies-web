@@ -4,15 +4,29 @@ import { createClient } from "@supabase/supabase-js";
 type Listing = {
   id: string;
   title: string;
+
+  sale_type: "sale" | "rent" | null;
+  listing_type?: string | null;
+
   suburb: string | null;
   city: string | null;
-  price: number | null;        // sale price
-  price_per_month?: number | null;
+  province?: string | null;
+
+  price: number | null;
+  price_per_month: number | null;
+
   bedrooms?: number | null;
   bathrooms?: number | null;
   garages?: number | null;
+  parking?: number | null;
+
+  floor_size_m2?: number | null;
+  erf_size_m2?: number | null;
+
   cover_image?: string | null;
-  status?: string;
+  images?: string[] | null;
+
+  status?: string | null;
 };
 
 function formatZAR(n: number) {

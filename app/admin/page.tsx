@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { createClient } from "@supabase/supabase-js";
 import LeadTable from "./LeadTable";
 import AgentTable from "./AgentTable";

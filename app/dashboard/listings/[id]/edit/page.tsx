@@ -4,7 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
-const LISTING_TYPES = ["house", "apartment", "townhouse", "duplex", "cluster", "land", "commercial"] as const;
+const LISTING_TYPES = [
+  "house",
+  "apartment",
+  "townhouse",
+  "duplex",
+  "cluster",
+  "land",
+  "commercial",
+] as const;
+
 const SALE_TYPES = ["sale", "rent"] as const;
 
 const FEATURE_OPTIONS = [
@@ -72,7 +81,7 @@ type ListingRow = {
   cover_image: string | null;
 
   status: string;
-	show_on_public?: boolean | null;
+  show_on_public?: boolean | null;
 };
 
 export default function EditListingPage() {
@@ -90,7 +99,8 @@ export default function EditListingPage() {
 
   // Core
   const [saleType, setSaleType] = useState<(typeof SALE_TYPES)[number]>("sale");
-  const [listingType, setListingType] = useState<(typeof LISTING_TYPES)[number]>("house");
+  const [listingType, setListingType] =
+    useState<(typeof LISTING_TYPES)[number]>("house");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
@@ -156,7 +166,12 @@ export default function EditListingPage() {
       setUserId(user.id);
 
       // 2) Block buyers from dashboard edits
-      const { data: prof } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
       if (prof?.role === "buyer") {
         router.push("/dashboard");
         return;
@@ -206,13 +221,14 @@ export default function EditListingPage() {
         .eq("id", listingId)
         .single();
 
+      // IMPORTANT: keep this simple to avoid TS "never" issues
       if (lErr || !data) {
-        setError(lErr?.message ?? "Listing not found.");
+        setError("Listing not found.");
         setLoading(false);
         return;
       }
 
-      const row = data as ListingRow;
+      const row = data as unknown as ListingRow;
 
       // 4) Ownership check
       if (row.agent_id !== user.id) {
@@ -294,13 +310,17 @@ export default function EditListingPage() {
   }
 
   function toggleFeature(f: string) {
-    setFeatures((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
+    setFeatures((prev) =>
+      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]
+    );
   }
 
   function onPickImages(selected: FileList | null) {
     if (!selected) return;
 
-    const picked = Array.from(selected).filter((f) => f.type.startsWith("image/"));
+    const picked = Array.from(selected).filter((f) =>
+      f.type.startsWith("image/")
+    );
 
     // limit total to 12 (existing + new)
     const allowed = Math.max(0, 12 - existingImages.length - newFiles.length);
@@ -342,16 +362,20 @@ export default function EditListingPage() {
     setCoverImage(url);
   }
 
-  async function uploadNewImages(uid: string, listingId: string) {
+  async function uploadNewImages(uid: string, lid: string) {
     if (newFiles.length === 0) return [] as string[];
 
     const bucket = supabase.storage.from("listing-images");
     const urls: string[] = [];
 
     for (const f of newFiles) {
-      const ext = (f.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const ext =
+        (f.name.split(".").pop() || "jpg")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "") || "jpg";
+
       const fileName = `${crypto.randomUUID()}.${ext}`;
-      const path = `${uid}/${listingId}/${fileName}`;
+      const path = `${uid}/${lid}/${fileName}`;
 
       const { error: upErr } = await bucket.upload(path, f, {
         upsert: false,
@@ -374,10 +398,18 @@ export default function EditListingPage() {
 
     // Required
     if (!title.trim()) return setError("Title is required.");
-    if (!suburb.trim() || !city.trim() || !province.trim()) return setError("Suburb, City, and Province are required.");
+    if (!suburb.trim() || !city.trim() || !province.trim()) {
+      return setError("Suburb, City, and Province are required.");
+    }
 
     const priceNum = cleanNumber(price);
-    if (priceNum === null) return setError(saleType === "sale" ? "Sale price is required." : "Rent per month is required.");
+    if (priceNum === null) {
+      return setError(
+        saleType === "sale"
+          ? "Sale price is required."
+          : "Rent per month is required."
+      );
+    }
 
     if (!userId) return setError("Not authenticated.");
 
@@ -391,7 +423,10 @@ export default function EditListingPage() {
       const mergedImages = [...existingImages, ...uploaded];
 
       // 3) Determine cover
-      const finalCover = coverImage && mergedImages.includes(coverImage) ? coverImage : mergedImages[0] ?? null;
+      const finalCover =
+        coverImage && mergedImages.includes(coverImage)
+          ? coverImage
+          : mergedImages[0] ?? null;
 
       // 4) Build price fields
       const salePrice = saleType === "sale" ? priceNum : null;
@@ -520,11 +555,19 @@ export default function EditListingPage() {
             </div>
 
             <Field label="Title *">
-              <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <input
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
             </Field>
 
             <Field label="Description">
-              <textarea className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={description} onChange={(e) => setDescription(e.target.value)} />
+              <textarea
+                className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </Field>
           </section>
 
@@ -543,7 +586,10 @@ export default function EditListingPage() {
               ) : (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                   {existingImages.map((url) => (
-                    <div key={url} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <div
+                      key={url}
+                      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                    >
                       <img src={url} alt="Listing" className="h-28 w-full object-cover" />
                       {coverImage === url ? (
                         <span className="absolute left-2 top-2 rounded-lg bg-emerald-700 px-2 py-1 text-xs text-white">
@@ -588,7 +634,10 @@ export default function EditListingPage() {
               {newPreviews.length > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                   {newPreviews.map((src, idx) => (
-                    <div key={src} className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <div
+                      key={src}
+                      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white"
+                    >
                       <img src={src} alt="New preview" className="h-28 w-full object-cover" />
                       <button
                         type="button"
@@ -610,12 +659,20 @@ export default function EditListingPage() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <Field label={saleType === "sale" ? "Sale price (ZAR) *" : "Rent per month (ZAR) *"}>
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={price} onChange={(e) => setPrice(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
               </Field>
 
               {saleType === "rent" ? (
                 <Field label="Deposit (ZAR)">
-                  <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={deposit} onChange={(e) => setDeposit(e.target.value)} />
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                    value={deposit}
+                    onChange={(e) => setDeposit(e.target.value)}
+                  />
                 </Field>
               ) : (
                 <div />
@@ -623,18 +680,31 @@ export default function EditListingPage() {
 
               {saleType === "rent" ? (
                 <Field label="Available from">
-                  <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" type="date" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} />
+                  <input
+                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                    type="date"
+                    value={availableFrom}
+                    onChange={(e) => setAvailableFrom(e.target.value)}
+                  />
                 </Field>
               ) : (
                 <div />
               )}
 
               <Field label="Levy (monthly)">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={levy} onChange={(e) => setLevy(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={levy}
+                  onChange={(e) => setLevy(e.target.value)}
+                />
               </Field>
 
               <Field label="Rates & Taxes (monthly)">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={ratesTaxes} onChange={(e) => setRatesTaxes(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={ratesTaxes}
+                  onChange={(e) => setRatesTaxes(e.target.value)}
+                />
               </Field>
             </div>
 
@@ -650,7 +720,11 @@ export default function EditListingPage() {
 
             <div className="grid gap-3 md:grid-cols-5">
               <Field label="Bedrooms">
-                <select className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={bedrooms} onChange={(e) => setBedrooms(e.target.value)}>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={bedrooms}
+                  onChange={(e) => setBedrooms(e.target.value)}
+                >
                   <option value="">—</option>
                   {["0", "1", "2", "3", "4", "5", "6", "7", "8+"].map((v) => (
                     <option key={v} value={v === "8+" ? "8" : v}>
@@ -661,7 +735,11 @@ export default function EditListingPage() {
               </Field>
 
               <Field label="Bathrooms">
-                <select className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={bathrooms} onChange={(e) => setBathrooms(e.target.value)}>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={bathrooms}
+                  onChange={(e) => setBathrooms(e.target.value)}
+                >
                   <option value="">—</option>
                   {["1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5+"].map((v) => (
                     <option key={v} value={v === "5+" ? "5" : v}>
@@ -672,7 +750,11 @@ export default function EditListingPage() {
               </Field>
 
               <Field label="Garages">
-                <select className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={garages} onChange={(e) => setGarages(e.target.value)}>
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={garages}
+                  onChange={(e) => setGarages(e.target.value)}
+                >
                   <option value="">—</option>
                   {["0", "1", "2", "3", "4+"].map((v) => (
                     <option key={v} value={v === "4+" ? "4" : v}>
@@ -683,7 +765,12 @@ export default function EditListingPage() {
               </Field>
 
               <Field label="Parking">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={parking} onChange={(e) => setParking(e.target.value)} placeholder="e.g. 2" />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={parking}
+                  onChange={(e) => setParking(e.target.value)}
+                  placeholder="e.g. 2"
+                />
               </Field>
 
               <div />
@@ -691,11 +778,21 @@ export default function EditListingPage() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <Field label="Floor size (m²)">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={floorSize} onChange={(e) => setFloorSize(e.target.value)} placeholder="e.g. 98" />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={floorSize}
+                  onChange={(e) => setFloorSize(e.target.value)}
+                  placeholder="e.g. 98"
+                />
               </Field>
 
               <Field label="Erf size (m²)">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={erfSize} onChange={(e) => setErfSize(e.target.value)} placeholder="e.g. 420" />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={erfSize}
+                  onChange={(e) => setErfSize(e.target.value)}
+                  placeholder="e.g. 420"
+                />
               </Field>
             </div>
           </section>
@@ -729,30 +826,58 @@ export default function EditListingPage() {
             <h2 className="font-semibold text-slate-900">Location</h2>
 
             <Field label="Street address">
-              <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)} />
+              <input
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                value={streetAddress}
+                onChange={(e) => setStreetAddress(e.target.value)}
+              />
             </Field>
 
             <div className="grid gap-3 md:grid-cols-3">
               <Field label="Suburb *">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={suburb} onChange={(e) => setSuburb(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={suburb}
+                  onChange={(e) => setSuburb(e.target.value)}
+                />
               </Field>
               <Field label="City *">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={city} onChange={(e) => setCity(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
               </Field>
               <Field label="Province *">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={province} onChange={(e) => setProvince(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={province}
+                  onChange={(e) => setProvince(e.target.value)}
+                />
               </Field>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
               <Field label="Postal code">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                />
               </Field>
               <Field label="Latitude (optional)">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={lat} onChange={(e) => setLat(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={lat}
+                  onChange={(e) => setLat(e.target.value)}
+                />
               </Field>
               <Field label="Longitude (optional)">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={lng} onChange={(e) => setLng(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={lng}
+                  onChange={(e) => setLng(e.target.value)}
+                />
               </Field>
             </div>
           </section>
@@ -762,13 +887,25 @@ export default function EditListingPage() {
             <h2 className="font-semibold text-slate-900">Contact (optional)</h2>
             <div className="grid gap-3 md:grid-cols-3">
               <Field label="Contact name">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                />
               </Field>
               <Field label="Contact phone">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                />
               </Field>
               <Field label="Contact email">
-                <input className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                />
               </Field>
             </div>
           </section>
@@ -809,7 +946,12 @@ function Toggle({
   return (
     <label className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3">
       <span className="text-sm font-medium text-slate-700">{label}</span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5" />
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-5 w-5"
+      />
     </label>
   );
 }
