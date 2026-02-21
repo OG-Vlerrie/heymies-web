@@ -15,12 +15,12 @@ type FormState = {
   phone: string;
 
   // Step 2
-  budget_min: string; // keep as string for inputs; cast on save
+  budget_min: string;
   budget_max: string;
-  property_type: string;
-  areas: string;
-  bedrooms: string;
-  bathrooms: string;
+  property_types: string[]; // MULTI
+  areas: string[]; // MULTI
+  bedrooms_min: string; // "1+" etc
+  bathrooms_min: string; // "1+" etc
 
   // Step 3
   preapproved: string;
@@ -36,6 +36,25 @@ type FormState = {
 
 const STEPS = ["Details", "Property", "Qualification"];
 
+const PROPERTY_TYPE_OPTIONS = ["House", "Apartment", "Townhouse", "Land"];
+
+const AREA_SUGGESTIONS = [
+  "Sandton",
+  "Bryanston",
+  "Fourways",
+  "Rosebank",
+  "Melrose",
+  "Randburg",
+  "Midrand",
+  "Centurion",
+  "Pretoria East",
+  "Bedfordview",
+  "Edenvale",
+  "Kempton Park",
+];
+
+const PLUS_OPTIONS = ["", "1+", "2+", "3+", "4+", "5+", "6+"];
+
 export default function BuyerSignupPage() {
   const router = useRouter();
 
@@ -43,16 +62,19 @@ export default function BuyerSignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Areas search input (UI-only)
+  const [areaQuery, setAreaQuery] = useState("");
+
   const [form, setForm] = useState<FormState>({
     full_name: "",
     phone: "",
 
     budget_min: "",
     budget_max: "",
-    property_type: "",
-    areas: "",
-    bedrooms: "",
-    bathrooms: "",
+    property_types: [],
+    areas: [],
+    bedrooms_min: "",
+    bathrooms_min: "",
 
     preapproved: "",
     timeline: "",
@@ -68,10 +90,12 @@ export default function BuyerSignupPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  const progress = useMemo(() => Math.round(((step + 1) / STEPS.length) * 100), [step]);
+  const progress = useMemo(
+    () => Math.round(((step + 1) / STEPS.length) * 100),
+    [step]
+  );
 
   function sanitizePhone(v: string) {
-    // Allow + and digits only
     return v.replace(/[^\d+]/g, "");
   }
 
@@ -82,35 +106,35 @@ export default function BuyerSignupPage() {
     return Number.isFinite(n) ? n : null;
   }
 
+  function parsePlusToNumber(v: string): number | null {
+    if (!v) return null;
+    const n = Number(v.replace("+", ""));
+    return Number.isFinite(n) ? n : null;
+  }
+
   function computeLeadScore() {
     let score = 0;
 
     const min = parseOptionalNumber(form.budget_min);
     const max = parseOptionalNumber(form.budget_max);
 
-    // Budget provided
     if (min !== null || max !== null) score += 10;
 
-    // Preapproval
     if (form.preapproved === "Yes") score += 30;
     if (form.preapproved === "In Progress") score += 15;
 
-    // Timeline
     if (form.timeline === "0-3 months") score += 25;
     else if (form.timeline === "3-6 months") score += 15;
     else if (form.timeline === "6-12 months") score += 8;
 
-    // Areas provided
-    if (form.areas.trim().length >= 3) score += 10;
+    if (form.areas.length > 0) score += 10;
+    if (form.property_types.length > 0) score += 5;
 
-    // Beds/baths set
-    if (parseOptionalNumber(form.bedrooms) !== null) score += 5;
-    if (parseOptionalNumber(form.bathrooms) !== null) score += 5;
+    if (parsePlusToNumber(form.bedrooms_min) !== null) score += 5;
+    if (parsePlusToNumber(form.bathrooms_min) !== null) score += 5;
 
-    // Selling first reduces urgency slightly
     if (form.selling_property === "Yes") score -= 5;
 
-    // Clamp
     return Math.max(0, Math.min(100, score));
   }
 
@@ -129,8 +153,7 @@ export default function BuyerSignupPage() {
       const min = parseOptionalNumber(form.budget_min);
       const max = parseOptionalNumber(form.budget_max);
       if (min !== null && max !== null && min > max) return "Budget Min cannot be higher than Budget Max.";
-      if (!form.property_type) return "Please select a property type.";
-      // areas optional
+      if (form.property_types.length === 0) return "Please select at least one property type.";
       return null;
     }
 
@@ -157,10 +180,32 @@ export default function BuyerSignupPage() {
     setStep((v) => Math.max(0, v - 1));
   }
 
+  function toggleArrayValue(key: "property_types" | "areas", value: string) {
+    setForm((prev) => {
+      const set = new Set(prev[key]);
+      if (set.has(value)) set.delete(value);
+      else set.add(value);
+      return { ...prev, [key]: Array.from(set) };
+    });
+  }
+
+  function removeChip(key: "property_types" | "areas", value: string) {
+    setForm((prev) => ({
+      ...prev,
+      [key]: prev[key].filter((v) => v !== value),
+    }));
+  }
+
+  const filteredAreas = useMemo(() => {
+    const q = areaQuery.trim().toLowerCase();
+    if (!q) return AREA_SUGGESTIONS.slice(0, 8);
+    return AREA_SUGGESTIONS.filter((a) => a.toLowerCase().includes(q)).slice(0, 8);
+  }, [areaQuery]);
+
   async function submit() {
     setError(null);
 
-    // Validate all steps before submit
+    // Validate all steps
     for (let s = 0; s < STEPS.length; s++) {
       const msg = validateStep(s);
       if (msg) {
@@ -173,43 +218,34 @@ export default function BuyerSignupPage() {
     setLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // Confirm Email is ON → user will NOT be logged in yet → don't insert into buyers here.
+      const { error: signUpError } = await supabase.auth.signUp({
         email: form.email.trim(),
         password: form.password,
+        options: {
+          // Optional: store data so you can use it later if you want
+          data: {
+            full_name: form.full_name.trim(),
+            phone: sanitizePhone(form.phone),
+            lead_score_estimate: computeLeadScore(),
+            property_types: form.property_types,
+            areas: form.areas,
+            bedrooms_min: parsePlusToNumber(form.bedrooms_min),
+            bathrooms_min: parsePlusToNumber(form.bathrooms_min),
+            preapproved: form.preapproved,
+            timeline: form.timeline,
+            selling_property: form.selling_property,
+            popia_consent: form.popia_consent,
+            budget_min: parseOptionalNumber(form.budget_min),
+            budget_max: parseOptionalNumber(form.budget_max),
+          },
+        },
       });
 
       if (signUpError) throw new Error(signUpError.message);
 
-      const userId = data.user?.id;
-      if (!userId) throw new Error("Signup succeeded but no user returned. Please try logging in.");
-
-      const lead_score = computeLeadScore();
-
-      const payload = {
-        user_id: userId,
-        full_name: form.full_name.trim(),
-        phone: sanitizePhone(form.phone),
-
-        budget_min: parseOptionalNumber(form.budget_min),
-        budget_max: parseOptionalNumber(form.budget_max),
-
-        property_type: form.property_type,
-        areas: form.areas.trim(),
-        bedrooms: parseOptionalNumber(form.bedrooms),
-        bathrooms: parseOptionalNumber(form.bathrooms),
-
-        preapproved: form.preapproved,
-        timeline: form.timeline,
-        selling_property: form.selling_property,
-
-        popia_consent: form.popia_consent,
-        lead_score,
-      };
-
-      const { error: insertError } = await supabase.from("buyers").insert(payload);
-      if (insertError) throw new Error(insertError.message);
-
-      router.push("/dashboard"); // change if you have a buyer-specific landing page
+      // Send them to the generic confirm screen
+      router.push("/signup/check-email?role=buyer");
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong.");
     } finally {
@@ -217,17 +253,22 @@ export default function BuyerSignupPage() {
     }
   }
 
+  const PREAPPROVAL_URL = "https://www.ooba.co.za/home-loans/pre-approval/";
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <div className="mx-auto max-w-2xl px-4 py-12">
         <h1 className="text-3xl font-semibold">Buyer Signup</h1>
-        <p className="mt-2 text-slate-600">Create your profile so HeyMies can qualify and match you faster.</p>
+        <p className="mt-2 text-slate-600">
+          Create your profile so HeyMies can qualify and match you faster.
+        </p>
 
         {/* Progress */}
         <div className="mt-8">
           <div className="flex items-center justify-between text-sm text-slate-600">
             <span>
-              Step {step + 1} of {STEPS.length}: <span className="font-medium text-slate-800">{STEPS[step]}</span>
+              Step {step + 1} of {STEPS.length}:{" "}
+              <span className="font-medium text-slate-800">{STEPS[step]}</span>
             </span>
             <span>{progress}%</span>
           </div>
@@ -318,48 +359,118 @@ export default function BuyerSignupPage() {
                 </Field>
               </div>
 
-              <Field label="Property type">
-                <select
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.property_type}
-                  onChange={(e) => setField("property_type", e.target.value)}
-                >
-                  <option value="">Select…</option>
-                  <option value="House">House</option>
-                  <option value="Apartment">Apartment</option>
-                  <option value="Townhouse">Townhouse</option>
-                  <option value="Land">Land</option>
-                </select>
-              </Field>
+              {/* Property Types (multi-select chips) */}
+              <div>
+                <div className="mb-2 block text-sm font-medium text-slate-700">
+                  Property type (select all that apply)
+                </div>
 
-              <Field label="Preferred areas (comma separated)">
+                <div className="flex flex-wrap gap-2">
+                  {PROPERTY_TYPE_OPTIONS.map((t) => {
+                    const active = form.property_types.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => toggleArrayValue("property_types", t)}
+                        className={[
+                          "rounded-full border px-4 py-2 text-sm",
+                          active
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                        ].join(" ")}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {form.property_types.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {form.property_types.map((t) => (
+                      <Chip key={t} text={t} onRemove={() => removeChip("property_types", t)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Areas search + multi-select */}
+              <div>
+                <div className="mb-2 block text-sm font-medium text-slate-700">
+                  Preferred areas (search and add)
+                </div>
+
                 <input
                   className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.areas}
-                  onChange={(e) => setField("areas", e.target.value)}
-                  placeholder="e.g. Sandton, Bryanston, Fourways"
+                  value={areaQuery}
+                  onChange={(e) => setAreaQuery(e.target.value)}
+                  placeholder="Search areas… e.g. Sandton"
                 />
-              </Field>
 
+                <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-2">
+                  <div className="flex flex-wrap gap-2">
+                    {filteredAreas.map((a) => {
+                      const active = form.areas.includes(a);
+                      return (
+                        <button
+                          key={a}
+                          type="button"
+                          onClick={() => toggleArrayValue("areas", a)}
+                          className={[
+                            "rounded-full border px-3 py-1.5 text-sm",
+                            active
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                          ].join(" ")}
+                        >
+                          {a}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Tip: start typing to filter, then click to add.
+                  </p>
+                </div>
+
+                {form.areas.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {form.areas.map((a) => (
+                      <Chip key={a} text={a} onRemove={() => removeChip("areas", a)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Beds/Baths dropdowns */}
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Bedrooms">
-                  <input
+                <Field label="Bedrooms (minimum)">
+                  <select
                     className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.bedrooms}
-                    onChange={(e) => setField("bedrooms", e.target.value)}
-                    placeholder="e.g. 3"
-                    inputMode="numeric"
-                  />
+                    value={form.bedrooms_min}
+                    onChange={(e) => setField("bedrooms_min", e.target.value)}
+                  >
+                    {PLUS_OPTIONS.map((o) => (
+                      <option key={o || "none"} value={o}>
+                        {o ? o : "Select…"}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
 
-                <Field label="Bathrooms">
-                  <input
+                <Field label="Bathrooms (minimum)">
+                  <select
                     className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.bathrooms}
-                    onChange={(e) => setField("bathrooms", e.target.value)}
-                    placeholder="e.g. 2"
-                    inputMode="numeric"
-                  />
+                    value={form.bathrooms_min}
+                    onChange={(e) => setField("bathrooms_min", e.target.value)}
+                  >
+                    {PLUS_OPTIONS.map((o) => (
+                      <option key={o || "none"} value={o}>
+                        {o ? o : "Select…"}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               </div>
             </div>
@@ -380,6 +491,18 @@ export default function BuyerSignupPage() {
                   <option value="In Progress">In progress</option>
                   <option value="No">Not pre-approved</option>
                 </select>
+
+                <div className="mt-2 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm">
+                  <span className="text-slate-700">Need pre-approval?</span>
+                  <a
+                    href={PREAPPROVAL_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white"
+                  >
+                    Do pre-approval
+                  </a>
+                </div>
               </Field>
 
               <Field label="Buying timeline">
@@ -408,7 +531,6 @@ export default function BuyerSignupPage() {
                 </select>
               </Field>
 
-              {/* POPIA */}
               <label className="flex items-start gap-3 rounded-2xl border border-slate-200 p-4">
                 <input
                   type="checkbox"
@@ -435,7 +557,11 @@ export default function BuyerSignupPage() {
           )}
 
           {/* Error */}
-          {error && <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+          {error && (
+            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {error}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="mt-8 flex items-center justify-between">
@@ -471,7 +597,10 @@ export default function BuyerSignupPage() {
         </div>
 
         <p className="mt-6 text-sm text-slate-600">
-          Already have an account? <a className="text-emerald-700 underline" href="/login">Log in</a>
+          Already have an account?{" "}
+          <a className="text-emerald-700 underline" href="/login">
+            Log in
+          </a>
         </p>
       </div>
     </main>
@@ -484,5 +613,21 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       {children}
     </label>
+  );
+}
+
+function Chip({ text, onRemove }: { text: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">
+      {text}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs hover:bg-slate-100"
+        aria-label={`Remove ${text}`}
+      >
+        ×
+      </button>
+    </span>
   );
 }
