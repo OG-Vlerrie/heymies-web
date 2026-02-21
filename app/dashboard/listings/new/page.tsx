@@ -25,6 +25,107 @@ const FEATURE_OPTIONS = [
   "gym",
 ] as const;
 
+/* ------------------ Description Generator Helpers ------------------ */
+
+function formatZAR(n: number) {
+  return new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency: "ZAR",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function titleCase(s: string) {
+  return s
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function generateListingDescription(input: {
+  saleType: "sale" | "rent";
+  listingType: string;
+  title: string;
+
+  suburb: string;
+  city: string;
+  province: string;
+
+  priceNum: number | null;
+  depositNum: number | null;
+  availableFrom: string;
+
+  bedroomsNum: number | null;
+  bathroomsNum: number | null;
+  garagesNum: number | null;
+  parkingNum: number | null;
+  floorSizeNum: number | null;
+  erfSizeNum: number | null;
+
+  petsAllowed: boolean;
+  furnished: boolean;
+  features: string[];
+
+  levyNum: number | null;
+  ratesTaxesNum: number | null;
+}) {
+  const loc = [input.suburb, input.city].filter(Boolean).join(", ");
+
+  const lines: string[] = [];
+
+  const bedBath = [
+    input.bedroomsNum != null ? `${input.bedroomsNum} bedroom` : null,
+    input.bathroomsNum != null ? `${input.bathroomsNum} bathroom` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const type = titleCase(input.listingType);
+
+  lines.push(`${type}${bedBath ? ` • ${bedBath}` : ""} in ${loc}${input.province ? `, ${input.province}` : ""}.`);
+
+  if (input.title?.trim()) lines.push(input.title.trim());
+
+  if (input.priceNum != null) {
+    if (input.saleType === "sale") {
+      lines.push(`Asking price: ${formatZAR(input.priceNum)}.`);
+    } else {
+      const rentBits = [`Rent: ${formatZAR(input.priceNum)} per month`];
+      if (input.depositNum != null) rentBits.push(`Deposit: ${formatZAR(input.depositNum)}`);
+      if (input.availableFrom) rentBits.push(`Available: ${input.availableFrom}`);
+      lines.push(rentBits.join(" • ") + ".");
+    }
+  }
+
+  const specs: string[] = [];
+  if (input.garagesNum != null) specs.push(`${input.garagesNum} garage${input.garagesNum === 1 ? "" : "s"}`);
+  if (input.parkingNum != null) specs.push(`${input.parkingNum} parking`);
+  if (input.floorSizeNum != null) specs.push(`${input.floorSizeNum}m² floor size`);
+  if (input.erfSizeNum != null) specs.push(`${input.erfSizeNum}m² erf`);
+  if (specs.length) lines.push(`Property features: ${specs.join(" • ")}.`);
+
+  const costs: string[] = [];
+  if (input.levyNum != null) costs.push(`Levy: ${formatZAR(input.levyNum)} p/m`);
+  if (input.ratesTaxesNum != null) costs.push(`Rates & taxes: ${formatZAR(input.ratesTaxesNum)} p/m`);
+  if (costs.length) lines.push(costs.join(" • ") + ".");
+
+  const flags: string[] = [];
+  if (input.furnished) flags.push("Furnished");
+  if (input.petsAllowed) flags.push("Pets allowed");
+  if (flags.length) lines.push(flags.join(" • ") + ".");
+
+  if (input.features?.length) {
+    const pretty = input.features.map(titleCase);
+    lines.push(`Extras: ${pretty.join(", ")}.`);
+  }
+
+  return lines.join("\n\n").trim();
+}
+
+/* ------------------------------ Page ------------------------------ */
+
 export default function NewListingPage() {
   const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
@@ -77,7 +178,10 @@ export default function NewListingPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
 
+  // Separate loading states (AI vs Create Listing)
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   function cleanNumber(input: string) {
@@ -149,18 +253,133 @@ export default function NewListingPage() {
     return { urls, cover: urls[0] ?? null };
   }
 
+  function onGenerateDescription() {
+    const priceNum = cleanNumber(price);
+    const depositNum = cleanNumber(deposit);
+
+    const next = generateListingDescription({
+      saleType,
+      listingType,
+      title,
+
+      suburb,
+      city,
+      province,
+
+      priceNum,
+      depositNum,
+      availableFrom,
+
+      bedroomsNum: cleanInt(bedrooms),
+      bathroomsNum: cleanNumber(bathrooms),
+      garagesNum: cleanInt(garages),
+      parkingNum: cleanInt(parking),
+      floorSizeNum: cleanInt(floorSize),
+      erfSizeNum: cleanInt(erfSize),
+
+      petsAllowed,
+      furnished,
+      features,
+
+      levyNum: cleanNumber(levy),
+      ratesTaxesNum: cleanNumber(ratesTaxes),
+    });
+
+    setDescription(next);
+  }
+
+  async function onGenerateDescriptionAI() {
+    setError(null);
+
+    const priceNum = cleanNumber(price);
+    if (priceNum == null) return setError("Please enter a price first.");
+    if (!suburb.trim() || !city.trim() || !province.trim())
+      return setError("Please fill Suburb, City, and Province first.");
+
+    const payload = {
+      saleType,
+      listingType,
+      title: title.trim(),
+
+      suburb: suburb.trim(),
+      city: city.trim(),
+      province: province.trim(),
+
+      price: priceNum,
+      deposit: cleanNumber(deposit),
+      availableFrom: availableFrom || null,
+
+      bedrooms: cleanInt(bedrooms),
+      bathrooms: cleanNumber(bathrooms),
+      garages: cleanInt(garages),
+      parking: cleanInt(parking),
+      floorSize: cleanInt(floorSize),
+      erfSize: cleanInt(erfSize),
+
+      petsAllowed,
+      furnished,
+      features,
+    };
+
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/listing-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "AI generation failed.");
+
+      setDescription(data.description || "");
+    } catch (e: any) {
+      setError(e?.message ?? "AI generation failed.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   async function createListing() {
     setError(null);
 
-    // Required
     if (!title.trim()) return setError("Title is required.");
-    if (!suburb.trim() || !city.trim() || !province.trim())
-      return setError("Suburb, City, and Province are required.");
+    if (!suburb.trim() || !city.trim() || !province.trim()) return setError("Suburb, City, and Province are required.");
 
     const priceNum = cleanNumber(price);
     if (priceNum === null) return setError(saleType === "sale" ? "Sale price is required." : "Rent per month is required.");
 
     if (files.length === 0) return setError("Please select at least 1 photo.");
+
+    const finalDescription =
+      description.trim() ||
+      generateListingDescription({
+        saleType,
+        listingType,
+        title,
+
+        suburb,
+        city,
+        province,
+
+        priceNum,
+        depositNum: cleanNumber(deposit),
+        availableFrom,
+
+        bedroomsNum: cleanInt(bedrooms),
+        bathroomsNum: cleanNumber(bathrooms),
+        garagesNum: cleanInt(garages),
+        parkingNum: cleanInt(parking),
+        floorSizeNum: cleanInt(floorSize),
+        erfSizeNum: cleanInt(erfSize),
+
+        petsAllowed,
+        furnished,
+        features,
+
+        levyNum: cleanNumber(levy),
+        ratesTaxesNum: cleanNumber(ratesTaxes),
+      });
 
     setLoading(true);
 
@@ -175,14 +394,13 @@ export default function NewListingPage() {
     const salePrice = saleType === "sale" ? priceNum : null;
     const rentPerMonth = saleType === "rent" ? priceNum : null;
 
-    // 1) Create listing (get ID)
     const { data: inserted, error: insErr } = await supabase
       .from("listings")
       .insert({
         agent_id: user.id,
 
         title: title.trim(),
-        description: description.trim() || null,
+        description: finalDescription || null,
         status: "active",
 
         sale_type: saleType,
@@ -201,7 +419,7 @@ export default function NewListingPage() {
 
         bedrooms: cleanInt(bedrooms),
         bathrooms: cleanNumber(bathrooms),
-	garages: cleanInt(garages),
+        garages: cleanInt(garages),
         parking: cleanInt(parking),
         floor_size_m2: cleanInt(floorSize),
         erf_size_m2: cleanInt(erfSize),
@@ -235,15 +453,9 @@ export default function NewListingPage() {
     const listingId = inserted.id as string;
 
     try {
-      // 2) Upload images
       const { urls, cover } = await uploadImages(user.id, listingId);
 
-      // 3) Update listing with URLs
-      const { error: upErr } = await supabase
-        .from("listings")
-        .update({ images: urls, cover_image: cover })
-        .eq("id", listingId);
-
+      const { error: upErr } = await supabase.from("listings").update({ images: urls, cover_image: cover }).eq("id", listingId);
       if (upErr) throw upErr;
 
       setLoading(false);
@@ -254,7 +466,7 @@ export default function NewListingPage() {
     }
   }
 
-    return (
+  return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-3xl p-6">
         <div className="flex items-start justify-between gap-4">
@@ -315,6 +527,29 @@ export default function NewListingPage() {
             </Field>
 
             <Field label="Description">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-slate-500">Optional: auto-generate from fields</span>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onGenerateDescription}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                  >
+                    Generate (template)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onGenerateDescriptionAI}
+                    className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? "Generating…" : "Generate (AI)"}
+                  </button>
+                </div>
+              </div>
+
               <textarea
                 className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                 value={description}
@@ -638,6 +873,7 @@ export default function NewListingPage() {
   );
 }
 
+/* ---------------------------- Components --------------------------- */
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
