@@ -1,32 +1,29 @@
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type Listing = {
   id: string;
   title: string;
 
   sale_type: "sale" | "rent" | null;
-  listing_type?: string | null;
 
   suburb: string | null;
   city: string | null;
-  province?: string | null;
 
   price: number | null;
   price_per_month: number | null;
 
-  bedrooms?: number | null;
-  bathrooms?: number | null;
-  garages?: number | null;
-  parking?: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  parking: number | null;
 
-  floor_size_m2?: number | null;
-  erf_size_m2?: number | null;
+  cover_image: string | null;
+  status: string | null;
 
-  cover_image?: string | null;
-  images?: string[] | null;
-
-  status?: string | null;
+  created_at: string;
 };
 
 function formatZAR(n: number) {
@@ -43,24 +40,45 @@ function supabasePublic() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-export default async function ListingsPage() {
+export default async function ListingsPage({
+  searchParams,
+}: {
+  searchParams?: { page?: string };
+}) {
   const supabase = supabasePublic();
 
-  const { data, error } = await supabase
+  const pageSize = 60;
+  const page = Math.max(1, Number(searchParams?.page ?? "1") || 1);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const { data, error, count } = await supabase
     .from("listings")
     .select(
-      "id, title, suburb, city, price, price_per_month, sale_type, bedrooms, bathrooms, parking, cover_image, status, created_at"
+      "id, title, suburb, city, price, price_per_month, sale_type, bedrooms, bathrooms, parking, cover_image, status, created_at",
+      { count: "exact" }
     )
     .eq("status", "active")
+    // If you have this column and want ONLY public listings, enable this:
+    // .eq("show_on_public", true)
     .order("created_at", { ascending: false })
-    .limit(60);
+    .range(from, to);
 
   const listings = (data ?? []) as Listing[];
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <Hero />
-      <Browse listings={listings} error={error?.message ?? null} />
+
+      <Browse
+        listings={listings}
+        error={error?.message ?? null}
+        page={page}
+        totalPages={totalPages}
+      />
+
       <Footer />
     </main>
   );
@@ -98,7 +116,17 @@ function Hero() {
 
 /* ----------------------------- BROWSE ----------------------------- */
 
-function Browse({ listings, error }: { listings: Listing[]; error: string | null }) {
+function Browse({
+  listings,
+  error,
+  page,
+  totalPages,
+}: {
+  listings: Listing[];
+  error: string | null;
+  page: number;
+  totalPages: number;
+}) {
   return (
     <Section title="Browse available properties" tone="blue">
       {error ? (
@@ -108,6 +136,8 @@ function Browse({ listings, error }: { listings: Listing[]; error: string | null
       ) : null}
 
       <ListingsBrowser listings={listings} />
+
+      <Pagination page={page} totalPages={totalPages} />
     </Section>
   );
 }
@@ -215,6 +245,48 @@ function ListingsBrowser({ listings }: { listings: Listing[] }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function Pagination({ page, totalPages }: { page: number; totalPages: number }) {
+  if (totalPages <= 1) return null;
+
+  const prev = Math.max(1, page - 1);
+  const next = Math.min(totalPages, page + 1);
+
+  return (
+    <div className="mt-10 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3">
+      <span className="text-sm text-slate-600">
+        Page <span className="font-semibold text-slate-900">{page}</span> of{" "}
+        <span className="font-semibold text-slate-900">{totalPages}</span>
+      </span>
+
+      <div className="flex gap-2">
+        <Link
+          href={`/listings?page=${prev}`}
+          aria-disabled={page <= 1}
+          className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
+            page <= 1
+              ? "pointer-events-none border-slate-200 bg-slate-50 text-slate-400"
+              : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          ← Prev
+        </Link>
+
+        <Link
+          href={`/listings?page=${next}`}
+          aria-disabled={page >= totalPages}
+          className={`rounded-xl border px-3 py-2 text-sm font-semibold ${
+            page >= totalPages
+              ? "pointer-events-none border-slate-200 bg-slate-50 text-slate-400"
+              : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+          }`}
+        >
+          Next →
+        </Link>
+      </div>
     </div>
   );
 }

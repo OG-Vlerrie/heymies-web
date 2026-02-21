@@ -107,7 +107,7 @@ export default function EditListingPage() {
   // Price
   const [price, setPrice] = useState("");
   const [deposit, setDeposit] = useState("");
-  const [availableFrom, setAvailableFrom] = useState(""); // YYYY-MM-DD
+  const [availableFrom, setAvailableFrom] = useState("");
   const [levy, setLevy] = useState("");
   const [ratesTaxes, setRatesTaxes] = useState("");
 
@@ -156,7 +156,6 @@ export default function EditListingPage() {
       setError(null);
       setLoading(true);
 
-      // 1) Ensure logged in
       const { data: userRes } = await supabase.auth.getUser();
       const user = userRes.user;
       if (!user) {
@@ -165,7 +164,6 @@ export default function EditListingPage() {
       }
       setUserId(user.id);
 
-      // 2) Block buyers from dashboard edits
       const { data: prof } = await supabase
         .from("profiles")
         .select("role")
@@ -177,7 +175,6 @@ export default function EditListingPage() {
         return;
       }
 
-      // 3) Load listing
       const { data, error: lErr } = await supabase
         .from("listings")
         .select(
@@ -221,7 +218,6 @@ export default function EditListingPage() {
         .eq("id", listingId)
         .single();
 
-      // IMPORTANT: keep this simple to avoid TS "never" issues
       if (lErr || !data) {
         setError("Listing not found.");
         setLoading(false);
@@ -230,14 +226,12 @@ export default function EditListingPage() {
 
       const row = data as unknown as ListingRow;
 
-      // 4) Ownership check
       if (row.agent_id !== user.id) {
         setError("You do not have access to edit this listing.");
         setLoading(false);
         return;
       }
 
-      // Prefill state
       const sType = (row.sale_type ?? "sale") as (typeof SALE_TYPES)[number];
       setSaleType(sType);
 
@@ -247,7 +241,6 @@ export default function EditListingPage() {
       setTitle(row.title ?? "");
       setDescription(row.description ?? "");
 
-      // price field shows sale price OR rent per month
       setPrice(String(sType === "rent" ? row.price_per_month ?? "" : row.price ?? ""));
       setDeposit(String(row.deposit ?? ""));
       setAvailableFrom(row.available_from ?? "");
@@ -286,7 +279,6 @@ export default function EditListingPage() {
       setLoading(false);
     })();
 
-    // cleanup previews on unmount
     return () => {
       setNewPreviews((prev) => {
         prev.forEach((u) => URL.revokeObjectURL(u));
@@ -318,14 +310,10 @@ export default function EditListingPage() {
   function onPickImages(selected: FileList | null) {
     if (!selected) return;
 
-    const picked = Array.from(selected).filter((f) =>
-      f.type.startsWith("image/")
-    );
+    const picked = Array.from(selected).filter((f) => f.type.startsWith("image/"));
 
-    // limit total to 12 (existing + new)
     const allowed = Math.max(0, 12 - existingImages.length - newFiles.length);
     const toAdd = picked.slice(0, allowed);
-
     if (toAdd.length === 0) return;
 
     setNewFiles((prev) => [...prev, ...toAdd]);
@@ -348,7 +336,6 @@ export default function EditListingPage() {
     setExistingImages((prev) => {
       const next = prev.filter((x) => x !== url);
 
-      // if we removed cover, pick next best
       setCoverImage((cur) => {
         if (cur !== url) return cur;
         return next[0] ?? null;
@@ -396,7 +383,6 @@ export default function EditListingPage() {
 
     setError(null);
 
-    // Required
     if (!title.trim()) return setError("Title is required.");
     if (!suburb.trim() || !city.trim() || !province.trim()) {
       return setError("Suburb, City, and Province are required.");
@@ -405,9 +391,7 @@ export default function EditListingPage() {
     const priceNum = cleanNumber(price);
     if (priceNum === null) {
       return setError(
-        saleType === "sale"
-          ? "Sale price is required."
-          : "Rent per month is required."
+        saleType === "sale" ? "Sale price is required." : "Rent per month is required."
       );
     }
 
@@ -416,23 +400,17 @@ export default function EditListingPage() {
     setSaving(true);
 
     try {
-      // 1) Upload new images
       const uploaded = await uploadNewImages(userId, listingId);
-
-      // 2) Merge images
       const mergedImages = [...existingImages, ...uploaded];
 
-      // 3) Determine cover
       const finalCover =
         coverImage && mergedImages.includes(coverImage)
           ? coverImage
           : mergedImages[0] ?? null;
 
-      // 4) Build price fields
       const salePrice = saleType === "sale" ? priceNum : null;
       const rentPerMonth = saleType === "rent" ? priceNum : null;
 
-      // 5) Update listing
       const { error: upErr } = await supabase
         .from("listings")
         .update({
@@ -466,7 +444,7 @@ export default function EditListingPage() {
           pets_allowed: petsAllowed,
           furnished: furnished,
 
-          features: features,
+          features,
 
           lat: cleanNumber(lat),
           lng: cleanNumber(lng),
@@ -482,7 +460,6 @@ export default function EditListingPage() {
 
       if (upErr) throw upErr;
 
-      // clear new uploads UI
       setNewFiles([]);
       setNewPreviews((prev) => {
         prev.forEach((u) => URL.revokeObjectURL(u));
@@ -493,6 +470,9 @@ export default function EditListingPage() {
       setCoverImage(finalCover);
 
       setSaving(false);
+
+      // IMPORTANT: refresh so list pages refetch (server components)
+      router.refresh();
       router.push("/dashboard/listings");
     } catch (e: any) {
       setSaving(false);
@@ -513,7 +493,10 @@ export default function EditListingPage() {
 
           <button
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 hover:bg-slate-50"
-            onClick={() => router.push("/dashboard/listings")}
+            onClick={() => {
+              router.refresh();
+              router.push("/dashboard/listings");
+            }}
           >
             Back
           </button>
