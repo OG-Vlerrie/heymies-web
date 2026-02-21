@@ -21,6 +21,11 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ NEW: stats
+  const [openLeadsCount, setOpenLeadsCount] = useState(0);
+  const [activeListingsCount, setActiveListingsCount] = useState(0);
+  const [weekViewingsCount, setWeekViewingsCount] = useState(0);
+
   useEffect(() => {
     (async () => {
       setError(null);
@@ -50,6 +55,53 @@ export default function DashboardPage() {
     })();
   }, [router, supabase]);
 
+  // ✅ NEW: fetch counts once profile is known
+  useEffect(() => {
+    if (!profile) return;
+
+    (async () => {
+      // Buyers have different stats; skip for now if you want
+      if (profile.role === "buyer") return;
+
+      // Active Listings
+      const { count: listingsCount, error: listErr } = await supabase
+        .from("listings")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", profile.id)
+        .eq("status", "active");
+
+      if (!listErr && typeof listingsCount === "number") {
+        setActiveListingsCount(listingsCount);
+      }
+
+      // Open Leads (adjust table/filters to your schema)
+      // Example assumes table "leads" with columns: agent_id, status
+      const { count: leadsCount } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", profile.id)
+        .eq("status", "open");
+
+      if (typeof leadsCount === "number") setOpenLeadsCount(leadsCount);
+
+      // This Week viewings (adjust table/filters to your schema)
+      // Example assumes table "viewings" with columns: agent_id, scheduled_at (timestamptz)
+      const startOfWeek = new Date();
+      const day = startOfWeek.getDay(); // 0=Sun
+      const diffToMonday = (day + 6) % 7;
+      startOfWeek.setDate(startOfWeek.getDate() - diffToMonday);
+      startOfWeek.setHours(0, 0, 0, 0);
+
+      const { count: viewingsCount } = await supabase
+        .from("viewings")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", profile.id)
+        .gte("scheduled_at", startOfWeek.toISOString());
+
+      if (typeof viewingsCount === "number") setWeekViewingsCount(viewingsCount);
+    })();
+  }, [profile, supabase]);
+
   async function logout() {
     await supabase.auth.signOut();
     router.push("/login");
@@ -77,7 +129,13 @@ export default function DashboardPage() {
 
   const name = profile.full_name ?? "Welcome";
   const roleLabel =
-    profile.role === "agent" ? "Agent" : profile.role === "seller" ? "Private Seller" : profile.role === "buyer" ? "Buyer" : "Admin";
+    profile.role === "agent"
+      ? "Agent"
+      : profile.role === "seller"
+      ? "Private Seller"
+      : profile.role === "buyer"
+      ? "Buyer"
+      : "Admin";
 
   const isBuyer = profile.role === "buyer";
 
@@ -133,17 +191,19 @@ export default function DashboardPage() {
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-600">{isBuyer ? "Saved Homes" : "Open Leads"}</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">0</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-900">{isBuyer ? 0 : openLeadsCount}</p>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-600">{isBuyer ? "Viewing Requests" : "Active Listings"}</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">0</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-900">{isBuyer ? 0 : activeListingsCount}</p>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-sm text-slate-600">This Week</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">0 {isBuyer ? "matches" : "viewings"}</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-900">
+              {isBuyer ? `0 matches` : `${weekViewingsCount} viewings`}
+            </p>
           </div>
         </div>
 
@@ -152,18 +212,14 @@ export default function DashboardPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-semibold text-slate-900">{isBuyer ? "Suggested Listings" : "Recent Leads"}</h2>
             <p className="mt-2 text-sm text-slate-600">
-              {isBuyer
-                ? "Once you set preferences, we’ll show matched homes here."
-                : "Once leads are routed, they’ll show here."}
+              {isBuyer ? "Once you set preferences, we’ll show matched homes here." : "Once leads are routed, they’ll show here."}
             </p>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-semibold text-slate-900">{isBuyer ? "Your Shortlist" : "Your Listings"}</h2>
             <p className="mt-2 text-sm text-slate-600">
-              {isBuyer
-                ? "Save properties to build your shortlist."
-                : "Create your first listing to start receiving better matched leads."}
+              {isBuyer ? "Save properties to build your shortlist." : "Create your first listing to start receiving better matched leads."}
             </p>
 
             {!isBuyer && (
