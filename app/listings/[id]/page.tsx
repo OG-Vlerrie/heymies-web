@@ -1,4 +1,7 @@
 import EnquiryGate from "@/components/listings/EnquiryGate";
+import CompareListingButton from "@/components/listings/CompareListingButton";
+import ListingMatchBadge from "@/components/listings/ListingMatchBadge";
+import SaveListingButton from "@/components/listings/SaveListingButton";
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 
@@ -105,15 +108,19 @@ export default async function ListingDetailPage({
                 </p>
 
                 {/* PRICE + CTA */}
-                <div className="mt-6 flex items-center justify-between">
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-2xl font-semibold">{displayPrice}</div>
 
-                  <a
-                    href="#enquire"
-                    className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-                  >
-                    Request Info
-                  </a>
+                  <div className="flex flex-wrap gap-2">
+                    <SaveListingButton listingId={listing.id} />
+                    <CompareListingButton listing={listing} />
+                    <a
+                      href="#enquire"
+                      className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+                    >
+                      Request Info
+                    </a>
+                  </div>
                 </div>
 
                 <p className="mt-2 text-xs text-slate-500">
@@ -153,6 +160,14 @@ export default async function ListingDetailPage({
             
             {/* CTA BOX */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6">
+              <SaveListingButton
+                listingId={listing.id}
+                className="mb-3 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 disabled:opacity-60"
+              />
+              <CompareListingButton
+                listing={listing}
+                className="mb-3 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+              />
               <a
                 href="#enquire"
                 className="mb-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
@@ -161,6 +176,9 @@ export default async function ListingDetailPage({
               </a>
 
               <h2 className="text-lg font-semibold">Property details</h2>
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <ListingMatchBadge listing={listing} />
+              </div>
 
               <div className="mt-4 grid gap-3">
                 <KV label="Bedrooms" value={listing.bedrooms ?? "—"} />

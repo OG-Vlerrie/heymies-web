@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { createClient } from "@supabase/supabase-js";
 import LeadTable from "./LeadTable";
 import AgentTable from "./AgentTable";
+import QualityPanel from "./QualityPanel";
 
 type Lead = {
   id: string;
@@ -32,21 +33,35 @@ export default async function AdminPage() {
     { auth: { persistSession: false } }
   );
 
-  const [{ data: leads, error: leadsErr }, { data: agents, error: agentsErr }] =
-    await Promise.all([
-      supabase
-        .from("leads")
-        .select("id,email,source,tag,created_at")
-        .order("created_at", { ascending: false })
-        .limit(200),
-      supabase
-        .from("agents")
-        .select(
-          "id,created_at,status,full_name,email,phone,agency,areas,property_types,max_leads_per_week,preferred_contact_time"
-        )
-        .order("created_at", { ascending: false })
-        .limit(200),
-    ]);
+  const [
+    { data: leads, error: leadsErr },
+    { data: agents, error: agentsErr },
+    alertsResult,
+    matchEventsResult,
+  ] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("id,email,source,tag,created_at")
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("agents")
+      .select(
+        "id,created_at,status,full_name,email,phone,agency,areas,property_types,max_leads_per_week,preferred_contact_time"
+      )
+      .order("created_at", { ascending: false })
+      .limit(200),
+    supabase
+      .from("buyer_alerts")
+      .select("id,name,enabled,areas,max_price,created_at")
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("match_events")
+      .select("id,score,reasons,status,created_at,listing:listings(title)")
+      .order("created_at", { ascending: false })
+      .limit(100),
+  ]);
 
   if (leadsErr || agentsErr) {
     return (
@@ -68,6 +83,22 @@ export default async function AdminPage() {
           <h2 className="text-xl font-semibold">Leads</h2>
           <p className="mt-1 text-sm text-slate-600">Latest 200 leads (tag + delete)</p>
           <LeadTable initialLeads={(leads || []) as Lead[]} />
+        </section>
+
+        <section className="mt-14">
+          <h2 className="text-xl font-semibold">Quality Engine</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Buyer alerts, match events, and manual matcher controls
+          </p>
+          <QualityPanel
+            alerts={(alertsResult.data || []) as any[]}
+            matchEvents={(matchEventsResult.data || []) as any[]}
+            unavailable={
+              alertsResult.error || matchEventsResult.error
+                ? alertsResult.error?.message ?? matchEventsResult.error?.message ?? "Unavailable"
+                : null
+            }
+          />
         </section>
 
         <section className="mt-14">

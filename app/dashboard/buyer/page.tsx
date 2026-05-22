@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import CompareListingButton from "@/components/listings/CompareListingButton";
+import SaveListingButton from "@/components/listings/SaveListingButton";
+import {
+  scoreListingForBuyer,
+  type ListingMatch,
+  type MatchListing,
+} from "@/lib/matching";
 
 /* ----------------------------- Types ----------------------------- */
 
@@ -18,6 +25,7 @@ type Buyer = {
 
   property_types: string[] | null;
   areas: string[] | null;
+  areas_multi?: string[] | null;
 
   bedrooms_min: number | null;
   bathrooms_min: number | null;
@@ -86,6 +94,16 @@ type Viewing = {
   };
 };
 
+type RecommendedListing = MatchListing & {
+  price_per_month: number | null;
+  sale_type: string | null;
+  listing_type: string | null;
+  parking: number | null;
+  cover_image: string | null;
+  status: string | null;
+  match: ListingMatch;
+};
+
 /* ----------------------------- Helpers ----------------------------- */
 
 function formatZAR(n: number) {
@@ -99,6 +117,16 @@ function formatZAR(n: number) {
 function fmtMaybeMoney(n: number | null) {
   if (n === null) return "—";
   return formatZAR(n);
+}
+
+function fmtRecommendedPrice(listing: RecommendedListing) {
+  if (listing.sale_type === "rent") {
+    return listing.price_per_month
+      ? `${formatZAR(listing.price_per_month)} / month`
+      : "-";
+  }
+
+  return listing.price !== null ? formatZAR(listing.price) : "-";
 }
 
 function fmtListingPrice(listing?: Enquiry["listing"] | SavedItem["listing"]) {
@@ -134,6 +162,10 @@ function oneRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value ?? undefined;
 }
 
+function getBuyerAreas(buyer: Buyer | null) {
+  return buyer?.areas?.length ? buyer.areas : buyer?.areas_multi ?? [];
+}
+
 /* ----------------------------- Page ----------------------------- */
 
 export default function BuyerDashboardPage() {
@@ -146,6 +178,7 @@ export default function BuyerDashboardPage() {
   const [saved, setSaved] = useState<SavedItem[]>([]);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [viewings, setViewings] = useState<Viewing[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendedListing[]>([]);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -173,10 +206,14 @@ export default function BuyerDashboardPage() {
     if (buyerErr) throw new Error(buyerErr.message);
     if (!buyerRow) return null;
 
-    return buyerRow as Buyer;
+    const normalizedBuyer = buyerRow as Buyer;
+    return {
+      ...normalizedBuyer,
+      areas: getBuyerAreas(normalizedBuyer),
+    };
   }
 
-  async function loadBuyerLists(buyerId: string, userId: string) {
+  async function loadBuyerLists(currentBuyer: Buyer, userId: string) {
     const [
       { data: savedRows, error: savedErr },
       { data: enquiryRows, error: enquiryErr },
@@ -187,7 +224,7 @@ export default function BuyerDashboardPage() {
         .select(
           "id,buyer_id,listing_id,created_at, listing:listings(id,title,price,suburb,city,bedrooms,bathrooms,cover_image,status)"
         )
-        .eq("buyer_id", buyerId)
+        .eq("buyer_id", currentBuyer.id)
         .order("created_at", { ascending: false })
         .limit(8),
 
@@ -205,7 +242,7 @@ export default function BuyerDashboardPage() {
         .select(
           "id,buyer_id,listing_id,scheduled_for,status, listing:listings(id,title,suburb,city,cover_image)"
         )
-        .eq("buyer_id", buyerId)
+        .eq("buyer_id", currentBuyer.id)
         .order("scheduled_for", { ascending: true })
         .limit(8),
     ]);
@@ -214,12 +251,12 @@ export default function BuyerDashboardPage() {
     if (enquiryErr) throw new Error(enquiryErr.message);
     if (viewingErr) throw new Error(viewingErr.message);
 
-    setSaved(
-      (savedRows ?? []).map((row) => ({
+    const nextSaved = (savedRows ?? []).map((row) => ({
         ...row,
         listing: oneRelated(row.listing),
-      })) as SavedItem[]
-    );
+      })) as SavedItem[];
+
+    setSaved(nextSaved);
 
     setEnquiries(
       (enquiryRows ?? []).map((row) => ({
@@ -234,6 +271,36 @@ export default function BuyerDashboardPage() {
         listing: oneRelated(row.listing),
       })) as Viewing[]
     );
+
+    await loadRecommendedListings(currentBuyer, nextSaved);
+  }
+
+  async function loadRecommendedListings(
+    currentBuyer: Buyer,
+    savedRows: SavedItem[] = saved
+  ) {
+    const savedIds = new Set(savedRows.map((item) => item.listing_id));
+
+    const { data, error: listingErr } = await supabase
+      .from("listings")
+      .select(
+        "id,title,price,price_per_month,sale_type,listing_type,suburb,city,bedrooms,bathrooms,parking,cover_image,status"
+      )
+      .eq("status", "active")
+      .limit(40);
+
+    if (listingErr) throw new Error(listingErr.message);
+
+    const scored = ((data ?? []) as Omit<RecommendedListing, "match">[])
+      .filter((listing) => !savedIds.has(listing.id))
+      .map((listing) => ({
+        ...listing,
+        match: scoreListingForBuyer(listing, currentBuyer),
+      }))
+      .sort((a, b) => b.match.score - a.match.score)
+      .slice(0, 4);
+
+    setRecommendations(scored);
   }
 
   async function refreshAll() {
@@ -249,7 +316,7 @@ export default function BuyerDashboardPage() {
     }
 
     setBuyer(b);
-    await loadBuyerLists(b.id, userId);
+    await loadBuyerLists(b, userId);
   }
 
   /* ---------- Actions ---------- */
@@ -357,6 +424,18 @@ export default function BuyerDashboardPage() {
             >
               Browse listings
             </Link>
+            <Link
+              href="/dashboard/buyer/compare"
+              className="hidden rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 sm:inline-flex"
+            >
+              Compare
+            </Link>
+            <Link
+              href="/dashboard/buyer/alerts"
+              className="hidden rounded-xl border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50 sm:inline-flex"
+            >
+              Alerts
+            </Link>
 
             <Link
               href="/dashboard/buyer/profile"
@@ -427,8 +506,8 @@ export default function BuyerDashboardPage() {
                     />
                     <Badge
                       label={
-                        buyer?.areas?.length
-                          ? buyer.areas.join(" · ")
+                        getBuyerAreas(buyer).length
+                          ? getBuyerAreas(buyer).join(" / ")
                           : "No areas set"
                       }
                     />
@@ -675,20 +754,31 @@ export default function BuyerDashboardPage() {
                 <SectionCard title="Progress" subtitle="Clear next steps.">
                   <ProgressTracker
                     preapproved={buyer?.preapproved ?? null}
-                    hasAreas={(buyer?.areas?.length ?? 0) > 0}
+                    hasAreas={getBuyerAreas(buyer).length > 0}
                     hasSaved={saved.length > 0}
                     hasEnquiries={enquiries.length > 0}
                   />
                 </SectionCard>
 
-                <SectionCard title="Recommended" subtitle="Next: wire matching logic.">
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
-                    Placeholder block.
-                    <div className="mt-2 text-xs text-slate-600">
-                      Next step: query listings and score against budget, areas, types,
-                      beds, and baths.
+                <SectionCard title="Recommended" subtitle="Scored against your preferences.">
+                  {recommendations.length === 0 ? (
+                    <EmptyState
+                      title="No matches yet"
+                      description="Add budget, areas, and property types to unlock better recommendations."
+                      ctaHref="/dashboard/buyer/profile"
+                      ctaText="Edit preferences"
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      {recommendations.map((listing) => (
+                        <RecommendationCard
+                          key={listing.id}
+                          listing={listing}
+                          onSaved={refreshAll}
+                        />
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </SectionCard>
               </div>
             </div>
@@ -803,6 +893,66 @@ function MiniListingCard({
       </Link>
 
       {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
+    </div>
+  );
+}
+
+function RecommendationCard({
+  listing,
+  onSaved,
+}: {
+  listing: RecommendedListing;
+  onSaved: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
+              {listing.match.score}% match
+            </span>
+            {listing.sale_type === "rent" ? (
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
+                Rent
+              </span>
+            ) : null}
+          </div>
+
+          <Link href={`/listings/${listing.id}`} className="mt-3 block">
+            <p className="truncate font-semibold">{listing.title}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">
+              {fmtRecommendedPrice(listing)}
+            </p>
+            <p className="mt-1 truncate text-sm text-slate-600">
+              {[listing.suburb, listing.city].filter(Boolean).join(", ") ||
+                "Location not specified"}
+            </p>
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {listing.match.reasons.map((reason) => (
+          <span
+            key={reason}
+            className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600"
+          >
+            {reason}
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <SaveListingButton listingId={listing.id} compact onChange={onSaved} />
+        <CompareListingButton listing={listing} />
+        <Link
+          href={`/listings/${listing.id}#enquire`}
+          className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:opacity-95"
+        >
+          Enquire
+        </Link>
+      </div>
     </div>
   );
 }

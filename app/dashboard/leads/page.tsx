@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { scoreListingForBuyer, type BuyerMatchProfile } from "@/lib/matching";
 
 type Role = "agent" | "seller" | "buyer" | "admin";
 
 type EnquiryLead = {
   id: string;
+  user_id: string | null;
   full_name: string | null;
   email: string | null;
   phone: string | null;
@@ -28,8 +30,18 @@ type EnquiryLead = {
     price: number | null;
     price_per_month: number | null;
     sale_type: string | null;
+    listing_type: string | null;
+    bedrooms: number | null;
+    bathrooms: number | null;
     status: string;
   };
+};
+
+type BuyerLeadProfile = BuyerMatchProfile & {
+  user_id: string;
+  lead_score: number | null;
+  preapproved: string | null;
+  timeline: string | null;
 };
 
 function formatZAR(n: number) {
@@ -75,6 +87,7 @@ export default function DashboardLeadsPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [q, setQ] = useState("");
   const [leads, setLeads] = useState<EnquiryLead[]>([]);
+  const [buyersByUserId, setBuyersByUserId] = useState<Record<string, BuyerLeadProfile>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -111,7 +124,7 @@ export default function DashboardLeadsPage() {
       const { data, error: lErr } = await supabase
         .from("enquiries")
         .select(
-          "id, full_name, email, phone, status, enquiry_count, latest_message, request_viewing, first_enquired_at, last_enquired_at, listing_id, listing:listings(id,title,suburb,city,cover_image,price,price_per_month,sale_type,status)"
+          "id, user_id, full_name, email, phone, status, enquiry_count, latest_message, request_viewing, first_enquired_at, last_enquired_at, listing_id, listing:listings(id,title,suburb,city,cover_image,price,price_per_month,sale_type,listing_type,bedrooms,bathrooms,status)"
         )
         .eq("agent_id", user.id)
         .order("last_enquired_at", { ascending: false })
@@ -124,12 +137,31 @@ export default function DashboardLeadsPage() {
         return;
       }
 
-      setLeads(
-        (data ?? []).map((row) => ({
+      const nextLeads = (data ?? []).map((row) => ({
           ...row,
           listing: oneRelated(row.listing),
-        })) as EnquiryLead[]
-      );
+        })) as EnquiryLead[];
+
+      setLeads(nextLeads);
+
+      const buyerUserIds = Array.from(
+        new Set(nextLeads.map((lead) => lead.user_id).filter(Boolean))
+      ) as string[];
+
+      if (buyerUserIds.length > 0) {
+        const { data: buyerRows } = await supabase
+          .from("buyers")
+          .select(
+            "user_id,lead_score,preapproved,timeline,budget_min,budget_max,property_types,areas,areas_multi,bedrooms_min,bathrooms_min"
+          )
+          .in("user_id", buyerUserIds);
+
+        setBuyersByUserId(
+          Object.fromEntries(
+            ((buyerRows ?? []) as BuyerLeadProfile[]).map((buyer) => [buyer.user_id, buyer])
+          )
+        );
+      }
       setLoading(false);
     })();
   }, [router, supabase]);
@@ -191,12 +223,44 @@ export default function DashboardLeadsPage() {
 
         <div className="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           {filtered.length === 0 ? (
-            <div className="p-5 text-sm text-slate-600">
-              No enquiries assigned yet.
+            <div className="p-8">
+              <h2 className="text-lg font-semibold text-slate-900">
+                No enquiries assigned yet
+              </h2>
+              <p className="mt-2 max-w-xl text-sm text-slate-600">
+                New enquiries will appear here with readiness, property fit, bond
+                status, timeline, and viewing intent so you can prioritise faster.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <QualityPill label="Readiness score" tone="good" />
+                <QualityPill label="Property fit" tone="warn" />
+                <QualityPill label="Viewing intent" tone="neutral" />
+              </div>
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
-              {filtered.map((l) => (
+              {filtered.map((l) => {
+                const buyer = l.user_id ? buyersByUserId[l.user_id] : null;
+                const fit =
+                  buyer && l.listing
+                    ? scoreListingForBuyer(
+                        {
+                          id: l.listing.id,
+                          title: l.listing.title,
+                          price: l.listing.price,
+                          price_per_month: l.listing.price_per_month,
+                          sale_type: l.listing.sale_type,
+                          listing_type: l.listing.listing_type,
+                          suburb: l.listing.suburb,
+                          city: l.listing.city,
+                          bedrooms: l.listing.bedrooms,
+                          bathrooms: l.listing.bathrooms,
+                        },
+                        buyer
+                      )
+                    : null;
+
+                return (
                 <li key={l.id} className="p-4 hover:bg-slate-50">
                   <Link href={`/dashboard/leads/${l.id}`} className="block">
                     <div className="flex items-start justify-between gap-4">
@@ -237,23 +301,74 @@ export default function DashboardLeadsPage() {
                             </>
                           ) : null}
                         </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <QualityPill
+                            label={
+                              buyer?.lead_score !== null && buyer?.lead_score !== undefined
+                                ? `Readiness ${buyer.lead_score}/100`
+                                : "Readiness unknown"
+                            }
+                            tone={
+                              (buyer?.lead_score ?? 0) >= 70
+                                ? "good"
+                                : (buyer?.lead_score ?? 0) >= 45
+                                ? "warn"
+                                : "neutral"
+                            }
+                          />
+                          <QualityPill
+                            label={fit ? `Property fit ${fit.score}%` : "Fit pending"}
+                            tone={fit && fit.score >= 70 ? "good" : fit && fit.score >= 45 ? "warn" : "neutral"}
+                          />
+                          {buyer?.preapproved ? (
+                            <QualityPill
+                              label={`Bond: ${buyer.preapproved}`}
+                              tone={buyer.preapproved === "Yes" ? "good" : "neutral"}
+                            />
+                          ) : null}
+                          {buyer?.timeline ? (
+                            <QualityPill label={buyer.timeline} tone="neutral" />
+                          ) : null}
+                        </div>
                       </div>
 
                       <div className="flex shrink-0 flex-col items-end gap-3">
                         <StatusPill status={l.status} />
                         <span className="text-xs text-slate-500">
-                          Intent: {l.enquiry_count > 1 ? "High" : "New"}
+                          Intent: {l.request_viewing || l.enquiry_count > 1 ? "High" : "New"}
                         </span>
                       </div>
                     </div>
                   </Link>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>
       </div>
     </main>
+  );
+}
+
+function QualityPill({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "good" | "warn" | "neutral";
+}) {
+  const cls =
+    tone === "good"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : tone === "warn"
+      ? "border-amber-200 bg-amber-50 text-amber-800"
+      : "border-slate-200 bg-slate-50 text-slate-700";
+
+  return (
+    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${cls}`}>
+      {label}
+    </span>
   );
 }
 
