@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
@@ -8,6 +9,7 @@ export default function LoginClient() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next");
+  const registerHref = next ? `/signup?next=${encodeURIComponent(next)}` : "/signup";
   const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [email, setEmail] = useState("");
@@ -79,6 +81,16 @@ export default function LoginClient() {
             >
               {loading ? "Signing in..." : "Log in"}
             </button>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white/70 p-4 text-center">
+            <p className="text-sm text-slate-600">New to HeyMies?</p>
+            <Link
+              href={registerHref}
+              className="mt-2 inline-flex font-semibold text-emerald-700 underline"
+            >
+              Register for an account
+            </Link>
           </div>
         </div>
 
