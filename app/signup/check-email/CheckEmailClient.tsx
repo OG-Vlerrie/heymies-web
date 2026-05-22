@@ -2,10 +2,19 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 export default function CheckEmailClient() {
   const searchParams = useSearchParams();
-  const email = searchParams.get("email"); // optional
+  const email = searchParams.get("email");
+  const next = searchParams.get("next");
+
+  // 🔥 Store next so we don’t lose it after email confirmation
+  useEffect(() => {
+    if (next) {
+      localStorage.setItem("auth_redirect_after_verify", next);
+    }
+  }, [next]);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16">
@@ -22,10 +31,16 @@ export default function CheckEmailClient() {
         )}
       </p>
 
+      <p className="mt-3 text-sm text-slate-600">
+        Once you confirm your email, return here and log in to continue.
+      </p>
+
       <div className="mt-8 flex gap-3">
         <Link
-          href="/login"
-          className="rounded-xl bg-emerald-600 px-4 py-2 text-white font-semibold hover:bg-emerald-700"
+          href={`/login${
+            next ? `?next=${encodeURIComponent(next)}` : ""
+          }`}
+          className="rounded-xl bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700"
         >
           Go to login
         </Link>

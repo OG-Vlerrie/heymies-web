@@ -57,9 +57,7 @@ export default async function ListingDetailPage({
     .eq("status", "active")
     .single();
 
-  if (error || !l) {
-    return notFound();
-  }
+  if (error || !l) return notFound();
 
   const listing = l as Listing;
 
@@ -82,47 +80,65 @@ export default async function ListingDetailPage({
     <main className="min-h-screen bg-white text-slate-900">
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="grid gap-6 md:grid-cols-5">
+          
           {/* LEFT */}
           <div className="md:col-span-3">
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+              
               {heroImage ? (
                 <img
                   src={heroImage}
                   alt={listing.title}
                   className="h-[320px] w-full object-cover"
-                  loading="lazy"
                 />
               ) : (
-                <div className="flex h-[320px] w-full items-center justify-center bg-slate-50 text-sm text-slate-500">
-                  No image
+                <div className="flex h-[320px] items-center justify-center bg-slate-50 text-sm text-slate-500">
+                  No image available
                 </div>
               )}
 
               <div className="p-6">
                 <h1 className="text-3xl font-semibold">{listing.title}</h1>
-                <p className="mt-2 text-sm text-slate-600">{addressLine || "—"}</p>
 
-                <div className="mt-6 text-2xl font-semibold">{displayPrice}</div>
+                <p className="mt-2 text-sm text-slate-600">
+                  {addressLine || "Location not specified"}
+                </p>
 
-                {listing.description ? (
+                {/* PRICE + CTA */}
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="text-2xl font-semibold">{displayPrice}</div>
+
+                  <a
+                    href="#enquire"
+                    className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+                  >
+                    Request Info
+                  </a>
+                </div>
+
+                <p className="mt-2 text-xs text-slate-500">
+                  Properties like this move quickly. Enquire now to avoid missing out.
+                </p>
+
+                {/* DESCRIPTION */}
+                {listing.description && (
                   <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                     {listing.description}
                   </div>
-                ) : null}
+                )}
 
-                {/* Gallery */}
-                {listing.images && listing.images.length > 0 ? (
+                {/* GALLERY */}
+                {listing.images?.length ? (
                   <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {listing.images.slice(0, 9).map((src) => (
                       <div
                         key={src}
-                        className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                        className="overflow-hidden rounded-2xl border border-slate-200"
                       >
                         <img
                           src={src}
                           alt=""
                           className="h-28 w-full object-cover"
-                          loading="lazy"
                         />
                       </div>
                     ))}
@@ -134,36 +150,67 @@ export default async function ListingDetailPage({
 
           {/* RIGHT */}
           <div className="md:col-span-2">
+            
+            {/* CTA BOX */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6">
-              <h2 className="text-lg font-semibold">Key details</h2>
+              <a
+                href="#enquire"
+                className="mb-4 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                Request Info
+              </a>
+
+              <h2 className="text-lg font-semibold">Property details</h2>
 
               <div className="mt-4 grid gap-3">
-                <KV label="Beds" value={listing.bedrooms ?? "—"} />
-                <KV label="Baths" value={listing.bathrooms ?? "—"} />
+                <KV label="Bedrooms" value={listing.bedrooms ?? "—"} />
+                <KV label="Bathrooms" value={listing.bathrooms ?? "—"} />
                 <KV label="Garages" value={listing.garages ?? "—"} />
                 <KV label="Parking" value={listing.parking ?? "—"} />
-                <KV label="Type" value={listing.listing_type ?? "—"} />
-                <KV label="Sale type" value={listing.sale_type ?? "—"} />
+                <KV label="Property type" value={listing.listing_type ?? "—"} />
+                <KV label="Listing type" value={listing.sale_type ?? "—"} />
               </div>
             </div>
 
+            {/* LOCATION */}
             <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6">
               <h2 className="text-lg font-semibold">Location</h2>
+
               <p className="mt-3 whitespace-pre-line text-sm text-slate-700">
                 {[listing.street_address, addressLine, listing.postal_code]
                   .filter(Boolean)
-                  .join("\n") || "—"}
+                  .join("\n") || "Location not available"}
               </p>
-              <p className="mt-3 text-xs text-slate-500">(Map coming next)</p>
+
+              <p className="mt-3 text-xs text-slate-500">
+                Map integration coming soon
+              </p>
             </div>
 
-            {/* Enquiry gate */}
-            <EnquiryGate listingId={listing.id} />
+            {/* ENQUIRY SECTION */}
+            <section
+              id="enquire"
+              className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-6"
+            >
+              <h2 className="text-lg font-semibold text-slate-900">
+                Request more information
+              </h2>
+
+              <p className="mt-2 text-sm text-slate-600">
+                Get full details, book a viewing, or speak directly to the agent about this property.
+              </p>
+
+              <div className="mt-5">
+                <EnquiryGate listingId={listing.id} />
+              </div>
+            </section>
           </div>
         </div>
 
         <footer className="mt-14 border-t px-2 py-10 text-sm text-slate-600">
-          <div className="mx-auto max-w-6xl">© {new Date().getFullYear()} HeyMies</div>
+          <div className="mx-auto max-w-6xl">
+            © {new Date().getFullYear()} HeyMies
+          </div>
         </footer>
       </div>
     </main>
@@ -173,7 +220,7 @@ export default async function ListingDetailPage({
 function KV({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+      <div className="text-[10px] font-semibold uppercase text-slate-500">
         {label}
       </div>
       <div className="mt-1 text-sm font-semibold text-slate-900">{value}</div>

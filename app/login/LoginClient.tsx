@@ -19,7 +19,10 @@ export default function LoginClient() {
     setError(null);
     setLoading(true);
 
-    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: authErr } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (authErr) {
       setLoading(false);
@@ -28,7 +31,17 @@ export default function LoginClient() {
     }
 
     setLoading(false);
-    router.push(next || "/dashboard");
+
+    const fallbackNext =
+      typeof window !== "undefined"
+        ? localStorage.getItem("auth_redirect_after_verify")
+        : null;
+
+    if (fallbackNext) {
+      localStorage.removeItem("auth_redirect_after_verify");
+    }
+
+    router.push(next || fallbackNext || "/dashboard");
   }
 
   return (
@@ -36,7 +49,9 @@ export default function LoginClient() {
       <div className="mx-auto max-w-md px-4 py-16">
         <div className="rounded-xl border border-slate-200 bg-white p-6">
           <h1 className="text-2xl font-semibold">Log in</h1>
-          <p className="mt-2 text-sm text-slate-700">Welcome back. Enter your details to continue.</p>
+          <p className="mt-2 text-sm text-slate-700">
+            Welcome back. Enter your details to continue.
+          </p>
 
           <div className="mt-6 space-y-3">
             <input

@@ -50,18 +50,23 @@ type SavedItem = {
 
 type Enquiry = {
   id: string;
-  buyer_id: string;
+  user_id: string;
   listing_id: string;
   status: string;
-  last_message: string | null;
-  updated_at: string;
+  latest_message: string | null;
+  enquiry_count: number;
+  request_viewing: boolean;
+  first_enquired_at: string;
+  last_enquired_at: string;
   listing?: {
     id: string;
     title: string;
     price: number | null;
+    price_per_month: number | null;
     suburb: string | null;
     city: string | null;
     cover_image: string | null;
+    sale_type: string | null;
     status: string;
   };
 };
@@ -70,7 +75,7 @@ type Viewing = {
   id: string;
   buyer_id: string;
   listing_id: string;
-  scheduled_for: string; // ISO
+  scheduled_for: string;
   status: string;
   listing?: {
     id: string;
@@ -96,6 +101,18 @@ function fmtMaybeMoney(n: number | null) {
   return formatZAR(n);
 }
 
+function fmtListingPrice(listing?: Enquiry["listing"] | SavedItem["listing"]) {
+  if (!listing) return "—";
+
+  if ("sale_type" in listing && listing.sale_type === "rent") {
+    return listing.price_per_month
+      ? `${formatZAR(listing.price_per_month)} / month`
+      : "—";
+  }
+
+  return listing.price !== null ? formatZAR(listing.price) : "—";
+}
+
 function fmtDateTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -109,10 +126,12 @@ function fmtDateTime(iso: string) {
 }
 
 function localDatetimeToIso(local: string) {
-  // local is "YYYY-MM-DDTHH:mm" from <input type="datetime-local">
-  // new Date(local) treats it as local time, then toISOString => UTC ISO
   const d = new Date(local);
   return d.toISOString();
+}
+
+function oneRelated<T>(value: T | T[] | null | undefined) {
+  return Array.isArray(value) ? value[0] : value ?? undefined;
 }
 
 /* ----------------------------- Page ----------------------------- */
@@ -135,10 +154,12 @@ export default function BuyerDashboardPage() {
   async function getAuthedUserIdOrRedirect() {
     const { data: auth } = await supabase.auth.getUser();
     const user = auth.user;
+
     if (!user) {
       router.push("/login?next=/dashboard/buyer");
       return null;
     }
+
     return user.id;
   }
 
@@ -155,7 +176,7 @@ export default function BuyerDashboardPage() {
     return buyerRow as Buyer;
   }
 
-  async function loadBuyerLists(buyerId: string) {
+  async function loadBuyerLists(buyerId: string, userId: string) {
     const [
       { data: savedRows, error: savedErr },
       { data: enquiryRows, error: enquiryErr },
@@ -171,12 +192,12 @@ export default function BuyerDashboardPage() {
         .limit(8),
 
       supabase
-        .from("buyer_enquiries")
+        .from("enquiries")
         .select(
-          "id,buyer_id,listing_id,status,last_message,updated_at, listing:listings(id,title,price,suburb,city,cover_image,status)"
+          "id,user_id,listing_id,status,latest_message,enquiry_count,request_viewing,first_enquired_at,last_enquired_at, listing:listings(id,title,price,price_per_month,suburb,city,cover_image,sale_type,status)"
         )
-        .eq("buyer_id", buyerId)
-        .order("updated_at", { ascending: false })
+        .eq("user_id", userId)
+        .order("last_enquired_at", { ascending: false })
         .limit(8),
 
       supabase
@@ -193,13 +214,31 @@ export default function BuyerDashboardPage() {
     if (enquiryErr) throw new Error(enquiryErr.message);
     if (viewingErr) throw new Error(viewingErr.message);
 
-    setSaved((savedRows ?? []) as any);
-    setEnquiries((enquiryRows ?? []) as any);
-    setViewings((viewingRows ?? []) as any);
+    setSaved(
+      (savedRows ?? []).map((row) => ({
+        ...row,
+        listing: oneRelated(row.listing),
+      })) as SavedItem[]
+    );
+
+    setEnquiries(
+      (enquiryRows ?? []).map((row) => ({
+        ...row,
+        listing: oneRelated(row.listing),
+      })) as Enquiry[]
+    );
+
+    setViewings(
+      (viewingRows ?? []).map((row) => ({
+        ...row,
+        listing: oneRelated(row.listing),
+      })) as Viewing[]
+    );
   }
 
   async function refreshAll() {
     setError(null);
+
     const userId = await getAuthedUserIdOrRedirect();
     if (!userId) return;
 
@@ -210,64 +249,31 @@ export default function BuyerDashboardPage() {
     }
 
     setBuyer(b);
-    await loadBuyerLists(b.id);
+    await loadBuyerLists(b.id, userId);
   }
 
   /* ---------- Actions ---------- */
 
   async function onUnsave(savedRowId: string) {
     setError(null);
+
     try {
-      const { error: delErr } = await supabase.from("buyer_saved").delete().eq("id", savedRowId);
+      const { error: delErr } = await supabase
+        .from("buyer_saved")
+        .delete()
+        .eq("id", savedRowId);
+
       if (delErr) throw new Error(delErr.message);
+
       await refreshAll();
     } catch (e: any) {
       setError(e?.message ?? "Could not remove saved item.");
     }
   }
 
-  async function onCreateEnquiry(listingId: string) {
-    setError(null);
-    try {
-      const userId = await getAuthedUserIdOrRedirect();
-      if (!userId) return;
-
-      const b = buyer ?? (await loadBuyerByUserId(userId));
-      if (!b) {
-        router.push("/signup/buyer");
-        return;
-      }
-
-      // if already exists, open it
-      const existing = enquiries.find((x) => x.listing_id === listingId);
-      if (existing) {
-        router.push(`/dashboard/buyer/enquiries/${existing.id}`);
-        return;
-      }
-
-      const { data, error: insErr } = await supabase
-        .from("buyer_enquiries")
-        .insert({
-          buyer_id: b.id,
-          listing_id: listingId,
-          status: "Open",
-          last_message: "New enquiry created.",
-        })
-        .select("id")
-        .single();
-
-      if (insErr) throw new Error(insErr.message);
-
-      await refreshAll();
-      router.push(`/dashboard/buyer/enquiries/${data.id}`);
-    } catch (e: any) {
-      setError(e?.message ?? "Could not create enquiry.");
-    }
-  }
-
   async function onScheduleViewing(listingId: string, localValue: string) {
-    // localValue = "YYYY-MM-DDTHH:mm"
     setError(null);
+
     try {
       const userId = await getAuthedUserIdOrRedirect();
       if (!userId) return;
@@ -289,15 +295,6 @@ export default function BuyerDashboardPage() {
 
       if (insErr) throw new Error(insErr.message);
 
-      // Optional: mark enquiry as viewing scheduled if exists
-      const related = enquiries.find((x) => x.listing_id === listingId);
-      if (related) {
-        await supabase
-          .from("buyer_enquiries")
-          .update({ status: "Viewing scheduled", last_message: "Viewing scheduled." })
-          .eq("id", related.id);
-      }
-
       await refreshAll();
     } catch (e: any) {
       setError(e?.message ?? "Could not schedule viewing.");
@@ -311,6 +308,7 @@ export default function BuyerDashboardPage() {
 
     (async () => {
       setLoading(true);
+
       try {
         await refreshAll();
       } catch (e: any) {
@@ -343,13 +341,12 @@ export default function BuyerDashboardPage() {
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
-      {/* Top bar */}
       <div className="border-b border-slate-200">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6">
           <div>
             <h1 className="text-2xl font-semibold">Buyer Dashboard</h1>
             <p className="mt-1 text-sm text-slate-600">
-              Your shortlist, conversations, and next steps — in one place.
+              Your shortlist, enquiries, and next steps — in one place.
             </p>
           </div>
 
@@ -372,14 +369,12 @@ export default function BuyerDashboardPage() {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-10">
-        {/* Error */}
         {error && (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        {/* Loading skeleton */}
         {loading ? (
           <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-4">
@@ -397,7 +392,6 @@ export default function BuyerDashboardPage() {
           </div>
         ) : (
           <>
-            {/* Profile Snapshot */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -485,7 +479,6 @@ export default function BuyerDashboardPage() {
               </div>
             </div>
 
-            {/* Stats row */}
             <div className="mt-6 grid gap-4 md:grid-cols-4">
               <StatCard title="Saved homes" value={stats.savedCount.toString()} />
               <StatCard title="Active enquiries" value={stats.enquiryCount.toString()} />
@@ -493,15 +486,16 @@ export default function BuyerDashboardPage() {
               <StatCard title="Lead score" value={(stats.matchScore ?? 0).toString()} />
             </div>
 
-            {/* Main grid */}
             <div className="mt-6 grid gap-6 md:grid-cols-3">
-              {/* Left column (2 wide) */}
               <div className="space-y-6 md:col-span-2">
                 <SectionCard
                   title="Saved properties"
                   subtitle="Your shortlist. Keep it tight."
                   action={
-                    <Link className="text-sm text-emerald-700 underline" href="/dashboard/buyer/saved">
+                    <Link
+                      className="text-sm text-emerald-700 underline"
+                      href="/dashboard/buyer/saved"
+                    >
                       View all
                     </Link>
                   }
@@ -519,7 +513,9 @@ export default function BuyerDashboardPage() {
                         <MiniListingCard
                           key={s.id}
                           title={s.listing?.title ?? "Listing"}
-                          subtitle={[s.listing?.suburb, s.listing?.city].filter(Boolean).join(", ")}
+                          subtitle={[s.listing?.suburb, s.listing?.city]
+                            .filter(Boolean)
+                            .join(", ")}
                           price={s.listing?.price ?? null}
                           meta={`${s.listing?.bedrooms ?? "—"} bd · ${s.listing?.bathrooms ?? "—"} ba`}
                           href={`/listings/${s.listing_id}`}
@@ -533,13 +529,12 @@ export default function BuyerDashboardPage() {
                                 Unsave
                               </button>
 
-                              <button
-                                type="button"
-                                onClick={() => onCreateEnquiry(s.listing_id)}
+                              <Link
+                                href={`/listings/${s.listing_id}#enquire`}
                                 className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:opacity-95"
                               >
                                 Enquire
-                              </button>
+                              </Link>
                             </>
                           }
                         />
@@ -549,10 +544,13 @@ export default function BuyerDashboardPage() {
                 </SectionCard>
 
                 <SectionCard
-                  title="Active enquiries"
-                  subtitle="Where things are moving (or stuck)."
+                  title="My enquiries"
+                  subtitle="Track your interest and next steps."
                   action={
-                    <Link className="text-sm text-emerald-700 underline" href="/dashboard/buyer/enquiries">
+                    <Link
+                      className="text-sm text-emerald-700 underline"
+                      href="/dashboard/buyer/enquiries"
+                    >
                       View all
                     </Link>
                   }
@@ -570,27 +568,45 @@ export default function BuyerDashboardPage() {
                         <div key={e.id} className="rounded-2xl border border-slate-200 p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="min-w-0">
-                              <p className="truncate font-semibold">{e.listing?.title ?? "Listing"}</p>
+                              <p className="truncate font-semibold">
+                                {e.listing?.title ?? "Listing"}
+                              </p>
+
+                              <p className="mt-1 text-sm font-medium text-slate-800">
+                                {fmtListingPrice(e.listing)}
+                              </p>
+
                               <p className="mt-1 truncate text-sm text-slate-600">
-                                {e.last_message ?? "No messages yet."}
+                                {e.latest_message ?? "No messages yet."}
                               </p>
-                              <p className="mt-2 text-xs text-slate-500">
-                                Updated {fmtDateTime(e.updated_at)}
-                              </p>
+
+                              <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                                <span>Updated {fmtDateTime(e.last_enquired_at)}</span>
+                                <span>•</span>
+                                <span>
+                                  {e.enquiry_count} enquiry
+                                  {e.enquiry_count === 1 ? "" : "ies"}
+                                </span>
+                                {e.request_viewing ? (
+                                  <>
+                                    <span>•</span>
+                                    <span>Viewing requested</span>
+                                  </>
+                                ) : null}
+                              </div>
                             </div>
 
                             <div className="flex flex-col items-end gap-2">
                               <StatusPill status={e.status} />
                               <Link
                                 className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:opacity-95"
-                                href={`/dashboard/buyer/enquiries/${e.id}`}
+                                href={`/listings/${e.listing_id}#enquire`}
                               >
-                                Open
+                                View
                               </Link>
                             </div>
                           </div>
 
-                          {/* Schedule viewing (simple + mobile-friendly) */}
                           <div className="mt-3 rounded-2xl bg-slate-50 p-3">
                             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                               Schedule a viewing
@@ -614,8 +630,9 @@ export default function BuyerDashboardPage() {
                                 Listing
                               </Link>
                             </div>
+
                             <p className="mt-2 text-xs text-slate-500">
-                              Pick a date/time. It will appear on your Viewing Schedule.
+                              Pick a date and time. It will appear on your viewing schedule.
                             </p>
                           </div>
                         </div>
@@ -625,7 +642,6 @@ export default function BuyerDashboardPage() {
                 </SectionCard>
               </div>
 
-              {/* Right column */}
               <div className="space-y-6">
                 <SectionCard title="Viewing schedule" subtitle="Next appointments.">
                   {viewings.length === 0 ? (
@@ -638,10 +654,15 @@ export default function BuyerDashboardPage() {
                       {viewings.map((v) => (
                         <div key={v.id} className="rounded-2xl border border-slate-200 p-4">
                           <p className="font-semibold">{v.listing?.title ?? "Viewing"}</p>
-                          <p className="mt-1 text-sm text-slate-600">{fmtDateTime(v.scheduled_for)}</p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {fmtDateTime(v.scheduled_for)}
+                          </p>
                           <div className="mt-2 flex items-center justify-between">
                             <StatusPill status={v.status} />
-                            <Link className="text-sm text-emerald-700 underline" href={`/listings/${v.listing_id}`}>
+                            <Link
+                              className="text-sm text-emerald-700 underline"
+                              href={`/listings/${v.listing_id}`}
+                            >
                               View listing
                             </Link>
                           </div>
@@ -664,7 +685,8 @@ export default function BuyerDashboardPage() {
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-700">
                     Placeholder block.
                     <div className="mt-2 text-xs text-slate-600">
-                      Next step: query listings and score against budget/areas/types/beds/baths.
+                      Next step: query listings and score against budget, areas, types,
+                      beds, and baths.
                     </div>
                   </div>
                 </SectionCard>
@@ -690,7 +712,9 @@ function Badge({ label }: { label: string }) {
 function StatCard({ title, value }: { title: string; value: string }) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">{title}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+        {title}
+      </p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
     </div>
   );
@@ -785,10 +809,11 @@ function MiniListingCard({
 
 function StatusPill({ status }: { status: string }) {
   const s = (status || "").toLowerCase();
+
   const cls =
     s.includes("new") || s.includes("open")
       ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-      : s.includes("scheduled") || s.includes("progress")
+      : s.includes("scheduled") || s.includes("progress") || s.includes("active")
       ? "border-slate-200 bg-slate-50 text-slate-700"
       : s.includes("closed") || s.includes("done")
       ? "border-slate-200 bg-white text-slate-700"
@@ -839,7 +864,11 @@ function ProgressTracker({
             className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
           >
             <span className="text-sm text-slate-700">{s.label}</span>
-            <span className={`text-xs font-semibold ${s.done ? "text-emerald-700" : "text-slate-500"}`}>
+            <span
+              className={`text-xs font-semibold ${
+                s.done ? "text-emerald-700" : "text-slate-500"
+              }`}
+            >
               {s.done ? "Done" : "Next"}
             </span>
           </div>
