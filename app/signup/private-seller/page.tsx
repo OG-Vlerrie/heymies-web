@@ -263,7 +263,7 @@ export default function PrivateSellerSignupPage() {
   const progress = Math.round(((step + 1) / STEPS.length) * 100);
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="tech-page text-slate-900">
       <div className="mx-auto max-w-2xl px-4 py-12">
         <h1 className="text-3xl font-semibold">Private Seller Signup</h1>
         <p className="mt-2 text-slate-600">List smarter. Get qualified buyers. Stay in control.</p>

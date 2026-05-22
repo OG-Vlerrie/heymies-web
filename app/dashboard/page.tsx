@@ -21,7 +21,6 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ NEW: stats
   const [openLeadsCount, setOpenLeadsCount] = useState(0);
   const [activeListingsCount, setActiveListingsCount] = useState(0);
   const [weekViewingsCount, setWeekViewingsCount] = useState(0);
@@ -55,15 +54,12 @@ export default function DashboardPage() {
     })();
   }, [router, supabase]);
 
-  // ✅ NEW: fetch counts once profile is known
   useEffect(() => {
     if (!profile) return;
 
     (async () => {
-      // Buyers have different stats; skip for now if you want
       if (profile.role === "buyer") return;
 
-      // Active Listings
       const { count: listingsCount, error: listErr } = await supabase
         .from("listings")
         .select("id", { count: "exact", head: true })
@@ -74,8 +70,6 @@ export default function DashboardPage() {
         setActiveListingsCount(listingsCount);
       }
 
-      // Open Leads (adjust table/filters to your schema)
-      // Example assumes table "leads" with columns: agent_id, status
       const { count: leadsCount } = await supabase
         .from("leads")
         .select("id", { count: "exact", head: true })
@@ -84,10 +78,8 @@ export default function DashboardPage() {
 
       if (typeof leadsCount === "number") setOpenLeadsCount(leadsCount);
 
-      // This Week viewings (adjust table/filters to your schema)
-      // Example assumes table "viewings" with columns: agent_id, scheduled_at (timestamptz)
       const startOfWeek = new Date();
-      const day = startOfWeek.getDay(); // 0=Sun
+      const day = startOfWeek.getDay();
       const diffToMonday = (day + 6) % 7;
       startOfWeek.setDate(startOfWeek.getDate() - diffToMonday);
       startOfWeek.setHours(0, 0, 0, 0);
@@ -98,7 +90,9 @@ export default function DashboardPage() {
         .eq("agent_id", profile.id)
         .gte("scheduled_at", startOfWeek.toISOString());
 
-      if (typeof viewingsCount === "number") setWeekViewingsCount(viewingsCount);
+      if (typeof viewingsCount === "number") {
+        setWeekViewingsCount(viewingsCount);
+      }
     })();
   }, [profile, supabase]);
 
@@ -107,19 +101,23 @@ export default function DashboardPage() {
     router.push("/login");
   }
 
-  if (loading) return <main className="mx-auto max-w-6xl p-6">Loading dashboard…</main>;
+  if (loading) {
+    return <main className="tech-page mx-auto max-w-6xl p-6">Loading dashboard...</main>;
+  }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-slate-50">
+      <main className="tech-page">
         <div className="mx-auto max-w-5xl p-6">
-          <p className="text-sm text-red-600">{error}</p>
-          <button
-            className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 hover:bg-slate-50"
-            onClick={() => router.push("/login")}
-          >
-            Back to login
-          </button>
+          <div className="tech-card rounded-2xl p-5">
+            <p className="text-sm text-red-600">{error}</p>
+            <button
+              className="tech-button-secondary mt-4 rounded-xl px-4 py-2 text-sm font-semibold"
+              onClick={() => router.push("/login")}
+            >
+              Back to login
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -140,99 +138,139 @@ export default function DashboardPage() {
   const isBuyer = profile.role === "buyer";
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-5xl p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Dashboard</h1>
-            <p className="text-sm text-slate-600">
-              {name} <span className="text-slate-400">•</span> {roleLabel}
-            </p>
+    <main className="tech-page">
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <section className="tech-hero rounded-3xl px-5 py-6 md:px-7">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
+                Command centre
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold text-white">Dashboard</h1>
+              <p className="mt-2 text-sm text-slate-300">
+                {name} <span className="text-slate-500">/</span> {roleLabel}
+              </p>
+            </div>
+
+            <button
+              className="rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/16"
+              onClick={logout}
+            >
+              Log out
+            </button>
           </div>
+        </section>
 
-          <button
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 hover:bg-slate-50"
-            onClick={logout}
-          >
-            Log out
-          </button>
-        </div>
-
-        {/* Actions */}
         <div className="mt-6 flex flex-wrap gap-2">
           {!isBuyer && (
             <button
               onClick={() => router.push("/dashboard/listings")}
-              className="rounded-2xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+              className="tech-button-primary rounded-xl px-4 py-2 text-sm font-semibold"
             >
-              View Listings
+              View listings
             </button>
           )}
 
           {!isBuyer && (
             <button
               onClick={() => router.push("/dashboard/listings/new")}
-              className="rounded-2xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+              className="tech-button-primary rounded-xl px-4 py-2 text-sm font-semibold"
             >
-              Add Listing
+              Add listing
             </button>
           )}
 
           <button
             onClick={() => router.push("/dashboard/leads")}
-            className="rounded-2xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+            className="tech-button-secondary rounded-xl px-4 py-2 text-sm font-semibold"
           >
             Leads
           </button>
         </div>
 
-        {/* Stats */}
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-600">{isBuyer ? "Saved Homes" : "Open Leads"}</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">{isBuyer ? 0 : openLeadsCount}</p>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-600">{isBuyer ? "Viewing Requests" : "Active Listings"}</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">{isBuyer ? 0 : activeListingsCount}</p>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-600">This Week</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
-              {isBuyer ? `0 matches` : `${weekViewingsCount} viewings`}
-            </p>
-          </div>
+          <MetricCard
+            label={isBuyer ? "Saved Homes" : "Open Leads"}
+            value={isBuyer ? "0" : String(openLeadsCount)}
+            accent="emerald"
+          />
+          <MetricCard
+            label={isBuyer ? "Viewing Requests" : "Active Listings"}
+            value={isBuyer ? "0" : String(activeListingsCount)}
+            accent="sky"
+          />
+          <MetricCard
+            label="This Week"
+            value={isBuyer ? "0 matches" : `${weekViewingsCount} viewings`}
+            accent="slate"
+          />
         </div>
 
-        {/* Panels */}
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="font-semibold text-slate-900">{isBuyer ? "Suggested Listings" : "Recent Leads"}</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              {isBuyer ? "Once you set preferences, we’ll show matched homes here." : "Once leads are routed, they’ll show here."}
-            </p>
-          </div>
+          <Panel title={isBuyer ? "Suggested Listings" : "Recent Leads"}>
+            {isBuyer
+              ? "Once you set preferences, we'll show matched homes here."
+              : "Once leads are routed, they'll show here."}
+          </Panel>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="font-semibold text-slate-900">{isBuyer ? "Your Shortlist" : "Your Listings"}</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              {isBuyer ? "Save properties to build your shortlist." : "Create your first listing to start receiving better matched leads."}
-            </p>
+          <Panel title={isBuyer ? "Your Shortlist" : "Your Listings"}>
+            {isBuyer
+              ? "Save properties to build your shortlist."
+              : "Create your first listing to start receiving better matched leads."}
 
             {!isBuyer && (
               <button
                 onClick={() => router.push("/dashboard/listings/new")}
-                className="mt-4 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                className="tech-button-primary mt-4 rounded-xl px-4 py-2 text-sm font-semibold"
               >
-                Add Listing
+                Add listing
               </button>
             )}
-          </div>
+          </Panel>
         </div>
       </div>
     </main>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent: "emerald" | "sky" | "slate";
+}) {
+  const accentClass =
+    accent === "emerald"
+      ? "bg-emerald-500"
+      : accent === "sky"
+      ? "bg-sky-500"
+      : "bg-slate-500";
+
+  return (
+    <div className="tech-card rounded-2xl p-5">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-600">{label}</p>
+        <span className={`h-2.5 w-2.5 rounded-full ${accentClass}`} />
+      </div>
+      <p className="mt-3 text-3xl font-semibold text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function Panel({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="tech-panel rounded-2xl p-5">
+      <h2 className="font-semibold text-slate-950">{title}</h2>
+      <div className="mt-2 text-sm text-slate-600">{children}</div>
+    </div>
   );
 }

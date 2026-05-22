@@ -28,7 +28,7 @@ export default function LeadForm({ source = "homepage-cta" }: { source?: string 
       }
 
       setStatus("ok");
-      setMsg("Added. We’ll be in touch.");
+      setMsg("Added. We'll be in touch.");
       setEmail("");
     } catch {
       setStatus("error");
@@ -43,12 +43,12 @@ export default function LeadForm({ source = "homepage-cta" }: { source?: string 
         autoComplete="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full rounded-xl px-4 py-3 text-slate-900 outline-none ring-1 ring-white/20 focus:ring-2 focus:ring-emerald-400"
+        className="w-full rounded-xl border border-white/15 bg-white/95 px-4 py-3 text-slate-900 outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-400/20"
       />
       <button
         type="submit"
         disabled={status === "loading"}
-        className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-500 disabled:opacity-60"
+        className="tech-button-primary w-full rounded-xl px-4 py-3 font-semibold disabled:opacity-60"
       >
         {status === "loading" ? "Saving..." : "Request access"}
       </button>

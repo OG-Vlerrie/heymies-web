@@ -340,7 +340,7 @@ export default function BuyerDashboardPage() {
   }, [saved, enquiries, viewings, buyer]);
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="tech-page text-slate-900">
       <div className="border-b border-slate-200">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6">
           <div>

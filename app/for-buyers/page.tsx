@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { TechHero } from "@/components/TechPage";
 
 /* ----------------------------- HELPERS ----------------------------- */
 
@@ -42,7 +43,7 @@ function transferDuty_2025(price: number) {
 
 export default function ForBuyersPage() {
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="tech-page">
       <Hero />
 
       <Section title="Buying a home in South Africa" tone="blue">
@@ -97,43 +98,14 @@ export default function ForBuyersPage() {
 
 function Hero() {
   return (
-    <section className="relative w-full overflow-hidden">
-      <div aria-hidden className="absolute inset-0">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at top, rgba(16,185,129,0.45) 0%, rgba(16,185,129,0.25) 35%, rgba(16,185,129,0.12) 60%, transparent 85%)",
-          }}
-        />
-      </div>
-
-      <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center">
-        <h1 className="text-4xl font-semibold md:text-5xl">For Buyers</h1>
-        <p className="mt-5 max-w-2xl text-lg text-slate-700">
-          Budget properly before you buy. Estimate repayments and transfer-related costs.
-        </p>
-
-        <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <Link
-            href="/listings"
-            className="rounded-xl bg-slate-900 px-7 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            Browse listings
-          </Link>
-          <Link
-            href="/contact"
-            className="rounded-xl border border-slate-300 px-7 py-3 text-sm font-semibold hover:bg-white/60"
-          >
-            Ask a question
-          </Link>
-        </div>
-
-        <p className="mt-12 text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
-          Smart. Simple. Sorted.
-        </p>
-      </div>
-    </section>
+    <TechHero
+      eyebrow="For buyers"
+      title="Budget clearly before you buy."
+      subtitle="Estimate repayments, understand transfer-related costs, and move through the buying journey with better context."
+      primary={{ href: "/listings", label: "Browse listings" }}
+      secondary={{ href: "/contact", label: "Ask a question" }}
+      graphic="property"
+    />
   );
 }
 

@@ -45,9 +45,10 @@ export default function LoginClient() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-64px)] bg-blue-50">
+    <main className="tech-page min-h-[calc(100vh-64px)]">
       <div className="mx-auto max-w-md px-4 py-16">
-        <div className="rounded-xl border border-slate-200 bg-white p-6">
+        <div className="tech-panel rounded-2xl p-6">
+          <p className="tech-kicker">Secure access</p>
           <h1 className="text-2xl font-semibold">Log in</h1>
           <p className="mt-2 text-sm text-slate-700">
             Welcome back. Enter your details to continue.
@@ -55,14 +56,14 @@ export default function LoginClient() {
 
           <div className="mt-6 space-y-3">
             <input
-              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              className="tech-input w-full rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
 
             <input
-              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              className="tech-input w-full rounded-xl px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400"
               placeholder="Password"
               type="password"
               value={password}
@@ -72,7 +73,7 @@ export default function LoginClient() {
             {error && <p className="text-sm text-red-600">{error}</p>}
 
             <button
-              className="w-full rounded-xl bg-slate-900 p-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+              className="tech-button-primary w-full rounded-xl p-3 text-sm font-semibold disabled:opacity-60"
               onClick={onLogin}
               disabled={loading}
             >
@@ -81,7 +82,7 @@ export default function LoginClient() {
           </div>
         </div>
 
-        <p className="mt-10 text-center text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
+        <p className="mt-10 text-center text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
           Smart. Simple. Sorted.
         </p>
       </div>

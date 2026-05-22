@@ -40,7 +40,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Only send emails if all envs exist
     if (
       process.env.RESEND_API_KEY &&
       process.env.EMAIL_FROM &&
@@ -48,7 +47,6 @@ export async function POST(req: Request) {
     ) {
       const resend = new Resend(process.env.RESEND_API_KEY);
 
-      // Notify you
       await resend.emails.send({
         from: process.env.EMAIL_FROM,
         to: [process.env.LEAD_NOTIFY_TO],
@@ -59,13 +57,12 @@ export async function POST(req: Request) {
         `,
       });
 
-      // Confirmation email to the lead
       await resend.emails.send({
         from: process.env.EMAIL_FROM,
         to: [email],
-        subject: "You’re on the HeyMies early access list",
+        subject: "You're on the HeyMies early access list",
         html: `
-          <p>Thanks — you’re on the list. We’ll email you when onboarding opens.</p>
+          <p>Thanks - you're on the list. We'll email you when onboarding opens.</p>
           <p><strong>HeyMies</strong></p>
         `,
       });

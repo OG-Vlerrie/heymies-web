@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6fafb;
+  --foreground: #0f172a;
+  --surface: rgba(255, 255, 255, 0.84);
+  --surface-strong: #ffffff;
+  --line: rgba(15, 23, 42, 0.1);
+  --ink: #07111f;
+  --muted: #64748b;
+  --accent: #10b981;
+  --accent-2: #0ea5e9;
+  --accent-3: #22c55e;
 }
 
 @theme inline {
@@ -12,15 +20,224 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--background);
+  scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 248, 248, 0.96)),
+    linear-gradient(90deg, rgba(14, 165, 233, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(16, 185, 129, 0.08) 1px, transparent 1px);
+  background-size: auto, 44px 44px, 44px 44px;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  letter-spacing: 0;
+}
+
+::selection {
+  background: rgba(16, 185, 129, 0.22);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  letter-spacing: 0;
+}
+
+button,
+a {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(14, 165, 233, 0.25);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .tech-page {
+    min-height: 100vh;
+    background:
+      linear-gradient(180deg, rgba(248, 252, 252, 0.95), rgba(240, 248, 247, 0.95)),
+      linear-gradient(90deg, rgba(14, 165, 233, 0.07) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(16, 185, 129, 0.07) 1px, transparent 1px);
+    background-size: auto, 42px 42px, 42px 42px;
+    color: var(--foreground);
+  }
+
+  .tech-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, rgba(6, 18, 32, 0.98), rgba(10, 35, 42, 0.96) 48%, rgba(7, 17, 31, 0.98)),
+      linear-gradient(90deg, rgba(14, 165, 233, 0.22) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(16, 185, 129, 0.18) 1px, transparent 1px);
+    background-size: auto, 36px 36px, 36px 36px;
+    color: white;
+  }
+
+  .tech-hero::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    z-index: -1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.7), rgba(14, 165, 233, 0.7), transparent);
+  }
+
+  .tech-section {
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  .tech-section-alt {
+    background:
+      linear-gradient(180deg, rgba(236, 253, 245, 0.58), rgba(239, 246, 255, 0.58)),
+      rgba(255, 255, 255, 0.78);
+  }
+
+  .tech-panel {
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.88));
+    box-shadow: 0 18px 55px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(18px);
+  }
+
+  .tech-card {
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.92));
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.07);
+  }
+
+  .tech-card:hover {
+    border-color: rgba(16, 185, 129, 0.34);
+    box-shadow: 0 22px 55px rgba(15, 23, 42, 0.11);
+    transform: translateY(-1px);
+  }
+
+  .tech-button-primary {
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    background: linear-gradient(135deg, #07111f, #064e3b 55%, #0f766e);
+    color: white;
+    box-shadow: 0 14px 28px rgba(16, 185, 129, 0.18);
+  }
+
+  .tech-button-primary:hover {
+    box-shadow: 0 18px 38px rgba(16, 185, 129, 0.26);
+    transform: translateY(-1px);
+  }
+
+  .tech-button-secondary {
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: rgba(255, 255, 255, 0.78);
+    color: #0f172a;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  }
+
+  .tech-button-secondary:hover {
+    border-color: rgba(14, 165, 233, 0.36);
+    background: white;
+    transform: translateY(-1px);
+  }
+
+  .tech-kicker {
+    color: #047857;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  .tech-input {
+    border: 1px solid rgba(148, 163, 184, 0.38);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .tech-input:focus {
+    border-color: rgba(14, 165, 233, 0.55);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+  }
+
+  @media (max-width: 640px) {
+    .tech-hero {
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+
+    .tech-hero h1,
+    .tech-hero p {
+      max-width: calc(100vw - 2rem);
+      overflow-wrap: break-word;
+    }
+
+    .tech-panel,
+    .tech-card {
+      max-width: calc(100vw - 2rem);
+    }
+  }
+
+  main.bg-white,
+  main.bg-blue-50,
+  main.bg-slate-50,
+  main.min-h-screen,
+  main[class*="min-h-"] {
+    background:
+      linear-gradient(180deg, rgba(248, 252, 252, 0.95), rgba(240, 248, 247, 0.95)),
+      linear-gradient(90deg, rgba(14, 165, 233, 0.07) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(16, 185, 129, 0.07) 1px, transparent 1px);
+    background-size: auto, 42px 42px, 42px 42px;
+  }
+
+  main .bg-blue-50,
+  main .bg-emerald-50,
+  main .bg-slate-50 {
+    background:
+      linear-gradient(180deg, rgba(236, 253, 245, 0.58), rgba(239, 246, 255, 0.58)),
+      rgba(255, 255, 255, 0.78);
+  }
+
+  main .border.bg-white,
+  main .border.border-slate-200.bg-white,
+  main .rounded-xl.border,
+  main .rounded-2xl.border,
+  main .rounded-3xl.border {
+    border-color: rgba(15, 23, 42, 0.1);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+  }
+
+  main input:not([type="checkbox"]),
+  main textarea,
+  main select {
+    border-color: rgba(148, 163, 184, 0.38);
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  main input:not([type="checkbox"]):focus,
+  main textarea:focus,
+  main select:focus {
+    border-color: rgba(14, 165, 233, 0.55);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+    outline: none;
+  }
 }

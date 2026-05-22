@@ -50,7 +50,7 @@ export default async function AdminPage() {
 
   if (leadsErr || agentsErr) {
     return (
-      <main className="min-h-screen bg-white text-slate-900">
+      <main className="tech-page text-slate-900">
         <div className="mx-auto max-w-6xl px-4 py-16">
           <h1 className="text-2xl font-semibold">Admin</h1>
           <p className="mt-4 text-red-600">Failed to load admin data.</p>
@@ -60,7 +60,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="tech-page text-slate-900">
       <div className="mx-auto max-w-6xl px-4 py-16">
         <h1 className="text-2xl font-semibold">Admin</h1>
 

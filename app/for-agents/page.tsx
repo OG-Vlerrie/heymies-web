@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { TechHero } from "@/components/TechPage";
 
 export default function ForAgentsPage() {
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="tech-page">
       <Hero />
       <AgentDashboard />
       <Pain />
@@ -22,46 +23,14 @@ export default function ForAgentsPage() {
 
 function Hero() {
   return (
-    <section className="relative w-full overflow-hidden">
-      <div aria-hidden className="absolute inset-0">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at top, rgba(16,185,129,0.45) 0%, rgba(16,185,129,0.25) 35%, rgba(16,185,129,0.12) 60%, transparent 85%)",
-          }}
-        />
-      </div>
-
-      <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center">
-        <h1 className="text-4xl font-semibold md:text-5xl">
-          Built for agents, not portals
-        </h1>
-        <p className="mt-5 max-w-2xl text-lg text-slate-700">
-          HeyMies helps you stop chasing leads and start speaking to buyers who
-          are actually ready.
-        </p>
-
-        <div className="mt-10 flex flex-wrap justify-center gap-4">
-          <Link
-            href="/#join"
-            className="rounded-xl bg-slate-900 px-7 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            Join HeyMies
-          </Link>
-          <Link
-            href="/how-it-works"
-            className="rounded-xl border border-slate-300 px-7 py-3 text-sm font-semibold hover:bg-white/60"
-          >
-            See how it works
-          </Link>
-        </div>
-
-        <p className="mt-12 text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
-          Smart. Simple. Sorted.
-        </p>
-      </div>
-    </section>
+    <TechHero
+      eyebrow="For agents"
+      title="Built for agents, not portals."
+      subtitle="HeyMies helps you stop chasing leads and start speaking to buyers who are actually ready."
+      primary={{ href: "/signup/agent", label: "Join HeyMies" }}
+      secondary={{ href: "/how-it-works", label: "See how it works" }}
+      graphic="score"
+    />
   );
 }
 

@@ -249,7 +249,7 @@ export default function BuyerProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="tech-page text-slate-900">
       <div className="mx-auto max-w-2xl px-4 py-12">
         <h1 className="text-3xl font-semibold">Complete your buyer profile</h1>
         <p className="mt-2 text-slate-600">This helps HeyMies match you faster.</p>

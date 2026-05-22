@@ -47,7 +47,7 @@ export default function ListingsPage() {
     })();
   }, [router, supabase]);
 
-  if (loading) return <main className="mx-auto max-w-6xl p-6">Loading listings…</main>;
+  if (loading) return <main className="tech-page mx-auto max-w-6xl p-6">Loading listings...</main>;
 
  async function onDelete(id: string) {
   const ok = window.confirm("Delete this listing? It will be removed from the public site.");
@@ -68,7 +68,8 @@ export default function ListingsPage() {
 
 
  return (
-    <main className="mx-auto max-w-6xl p-6">
+    <main className="tech-page min-h-screen">
+      <div className="mx-auto max-w-6xl p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Listings</h1>
@@ -145,6 +146,7 @@ export default function ListingsPage() {
             ))}
           </ul>
         )}
+      </div>
       </div>
     </main>
   );

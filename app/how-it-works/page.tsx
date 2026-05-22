@@ -1,46 +1,24 @@
-import Link from "next/link";
+import {
+  TechCTA,
+  TechCard,
+  TechHero,
+  TechSection,
+} from "@/components/TechPage";
 
 export default function HowItWorksPage() {
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      <Hero />
-      <Steps />
-      <Detail />
-      <FinalCTA />
-    </main>
-  );
-}
+    <main className="tech-page">
+      <TechHero
+        eyebrow="How it works"
+        title="From raw enquiry to ready buyer."
+        subtitle="HeyMies captures buyer interest, scores readiness, follows up automatically, and hands off only the strongest opportunities."
+        primary={{ href: "/signup", label: "Join HeyMies" }}
+        secondary={{ href: "/pricing", label: "View pricing" }}
+        graphic="pipeline"
+      />
 
-/* ----------------------------- HERO ----------------------------- */
-
-function Hero() {
-  return (
-    <section className="relative w-full overflow-hidden">
-      {/* subtle green wash */}
-      <div aria-hidden className="absolute inset-0">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at top, rgba(16,185,129,0.30) 0%, rgba(16,185,129,0.15) 40%, transparent 75%)",
-          }}
-        />
-      </div>
-
-      <div className="relative mx-auto max-w-6xl px-4 py-24">
-        {/* keep the rest of your hero content here */}
-      </div>
-    </section>
-  );
-}
-
-/* ----------------------------- STEPS ----------------------------- */
-
-function Steps() {
-  return (
-    <section className="bg-slate-50">
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <div className="grid gap-6 md:grid-cols-4">
+      <TechSection title="The operating flow" tone="alt">
+        <div className="grid gap-5 md:grid-cols-4">
           <Step
             n="1"
             title="Capture"
@@ -54,7 +32,7 @@ function Steps() {
           <Step
             n="3"
             title="Nurture"
-            text="Automated follow-ups keep buyers warm until they’re ready to act."
+            text="Automated follow-ups keep buyers warm until they're ready to act."
           />
           <Step
             n="4"
@@ -62,92 +40,52 @@ function Steps() {
             text="Only qualified, ready buyers are sent to the agent to close."
           />
         </div>
-      </div>
-    </section>
-  );
-}
+      </TechSection>
 
-/* ----------------------------- DETAIL ----------------------------- */
-
-function Detail() {
-  return (
-    <section className="bg-white">
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <div className="grid gap-12 md:grid-cols-2">
-          <div>
-            <h2 className="text-2xl font-semibold">What the agent actually gets</h2>
+      <TechSection title="What changes for the agent">
+        <div className="grid gap-6 md:grid-cols-2">
+          <TechCard>
+            <h3 className="text-xl font-semibold">What the agent gets</h3>
             <ul className="mt-6 space-y-3 text-slate-700">
-              <li>• A buyer who has engaged multiple times</li>
-              <li>• Clear intent and timeframe</li>
-              <li>• Context before the first call</li>
-              <li>• No chasing or guessing</li>
+              <li>A buyer who has engaged multiple times</li>
+              <li>Clear intent and timeframe</li>
+              <li>Context before the first call</li>
+              <li>No chasing or guessing</li>
             </ul>
-          </div>
+          </TechCard>
 
-          <div>
-            <h2 className="text-2xl font-semibold">What you don’t deal with</h2>
+          <TechCard>
+            <h3 className="text-xl font-semibold">What disappears</h3>
             <ul className="mt-6 space-y-3 text-slate-700">
-              <li>• Junk enquiries</li>
-              <li>• Cold leads</li>
-              <li>• Endless follow-ups</li>
-              <li>• Paying for noise</li>
+              <li>Junk enquiries</li>
+              <li>Cold leads</li>
+              <li>Endless follow-ups</li>
+              <li>Paying for noise</li>
             </ul>
-          </div>
+          </TechCard>
         </div>
-      </div>
-    </section>
+      </TechSection>
+
+      <TechCTA
+        title="Built for agents who value their time"
+        body="Join early and be notified when onboarding opens."
+        href="/signup"
+        label="Join HeyMies"
+      />
+    </main>
   );
 }
 
-/* ----------------------------- CTA ----------------------------- */
-
-function FinalCTA() {
+function Step({ n, title, text }: { n: string; title: string; text: string }) {
   return (
-    <section className="bg-slate-900 px-4 py-20 text-white">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="text-3xl font-semibold">Built for agents who value their time</h2>
-        <p className="mt-3 text-slate-300">Join early and be notified when onboarding opens.</p>
-
-        <div className="mt-8 flex flex-wrap gap-4">
-          <Link
-            href="/#join"
-            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500"
-          >
-            Join HeyMies
-          </Link>
-
-          <Link
-            href="/pricing"
-            className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-transparent px-6 py-3 text-sm font-semibold text-white hover:bg-white/10"
-          >
-            View pricing
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ----------------------------- UI ----------------------------- */
-
-function Step({
-  n,
-  title,
-  text,
-}: {
-  n: string;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6">
+    <TechCard>
       <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm font-semibold text-white">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-950 text-sm font-semibold text-emerald-200">
           {n}
         </span>
         <strong>{title}</strong>
       </div>
       <p className="text-sm text-slate-700">{text}</p>
-    </div>
+    </TechCard>
   );
 }

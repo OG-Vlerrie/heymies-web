@@ -483,7 +483,7 @@ export default function EditListingPage() {
   if (loading) return <main className="mx-auto max-w-3xl p-6">Loading listing…</main>;
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="tech-page">
       <div className="mx-auto max-w-3xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div>

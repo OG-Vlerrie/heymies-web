@@ -58,10 +58,10 @@ export default function LeadDetailPage() {
   }, [params, router, supabase]);
 
   if (loading)
-    return <main className="mx-auto max-w-6xl p-6">Loading lead…</main>;
+    return <main className="tech-page mx-auto max-w-6xl p-6">Loading lead...</main>;
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="tech-page">
       <div className="mx-auto max-w-6xl p-6">
         <div className="flex items-start justify-between gap-4">
           <div>

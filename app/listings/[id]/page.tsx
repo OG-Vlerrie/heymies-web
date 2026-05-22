@@ -77,7 +77,7 @@ export default async function ListingDetailPage({
       : "—";
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="tech-page text-slate-900">
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="grid gap-6 md:grid-cols-5">
           
