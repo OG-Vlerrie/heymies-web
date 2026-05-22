@@ -131,7 +131,13 @@ export default function SaveListingButton({
     }
   }
 
-  const label = savedId ? "Saved" : compact ? "Save" : "Save listing";
+  const label = savedId
+    ? "Saved"
+    : !checkOnMount && compact
+    ? "Login to save"
+    : compact
+    ? "Save"
+    : "Save listing";
 
   return (
     <button

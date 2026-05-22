@@ -113,7 +113,11 @@ export default async function ListingDetailPage({
 
                   <div className="flex flex-wrap gap-2">
                     <SaveListingButton listingId={listing.id} />
-                    <CompareListingButton listing={listing} />
+                    <CompareListingButton
+                      listing={listing}
+                      requireAuth
+                      loginNext={`/listings/${listing.id}`}
+                    />
                     <a
                       href="#enquire"
                       className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
@@ -166,6 +170,8 @@ export default async function ListingDetailPage({
               />
               <CompareListingButton
                 listing={listing}
+                requireAuth
+                loginNext={`/listings/${listing.id}`}
                 className="mb-3 inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
               />
               <a

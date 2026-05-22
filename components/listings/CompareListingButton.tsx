@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
 export type CompareListingSnapshot = {
   id: string;
@@ -46,12 +48,20 @@ export function getCompareChangeEvent() {
 export default function CompareListingButton({
   listing,
   className,
+  requireAuth = false,
+  loginNext,
 }: {
   listing: CompareListingSnapshot;
   className?: string;
+  requireAuth?: boolean;
+  loginNext?: string;
 }) {
+  const router = useRouter();
   const [selected, setSelected] = useState(false);
   const [count, setCount] = useState(0);
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(
+    requireAuth ? null : true
+  );
 
   useEffect(() => {
     function sync() {
@@ -70,9 +80,32 @@ export default function CompareListingButton({
     };
   }, [listing.id]);
 
-  function toggle(event: React.MouseEvent<HTMLButtonElement>) {
+  useEffect(() => {
+    if (!requireAuth) return;
+
+    let cancelled = false;
+    const supabase = supabaseBrowser();
+
+    async function checkAuth() {
+      const { data } = await supabase.auth.getUser();
+      if (!cancelled) setIsAuthed(Boolean(data.user));
+    }
+
+    checkAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requireAuth]);
+
+  async function toggle(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
+
+    if (requireAuth && !isAuthed) {
+      router.push(`/login?next=${encodeURIComponent(loginNext ?? `/listings/${listing.id}`)}`);
+      return;
+    }
 
     const items = readCompareList();
     if (items.some((item) => item.id === listing.id)) {
@@ -96,9 +129,23 @@ export default function CompareListingButton({
             : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
         ].join(" ")
       }
-      title={selected ? "Remove from comparison" : "Add to comparison"}
+      title={
+        requireAuth && !isAuthed
+          ? "Log in to compare listings"
+          : selected
+          ? "Remove from comparison"
+          : "Add to comparison"
+      }
     >
-      {selected ? "Comparing" : count >= 4 ? "Replace compare" : "Compare"}
+      {requireAuth && isAuthed === null
+        ? "Checking"
+        : requireAuth && !isAuthed
+        ? "Login to compare"
+        : selected
+        ? "Comparing"
+        : count >= 4
+        ? "Replace compare"
+        : "Compare"}
     </button>
   );
 }
