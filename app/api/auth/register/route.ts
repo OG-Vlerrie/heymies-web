@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { Resend } from "resend";
 
 type SignupRole = "agent" | "seller" | "buyer";
 
@@ -40,9 +40,20 @@ export async function POST(req: Request) {
       return badRequest("Password must be at least 6 characters.");
     }
 
-    if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    const emailFrom = process.env.EMAIL_FROM?.trim();
+
+    if (!resendApiKey || !emailFrom) {
+      const missingEmailConfig = [
+        !resendApiKey ? "RESEND_API_KEY" : null,
+        !emailFrom ? "EMAIL_FROM" : null,
+      ].filter(Boolean);
+
       return NextResponse.json(
-        { ok: false, error: "Email service is not configured." },
+        {
+          ok: false,
+          error: `Email service is not configured. Missing: ${missingEmailConfig.join(", ")}.`,
+        },
         { status: 500 }
       );
     }
@@ -126,8 +137,9 @@ export async function POST(req: Request) {
       }
     }
 
+    const resend = new Resend(resendApiKey);
     const emailResponse = await resend.emails.send({
-      from: process.env.EMAIL_FROM,
+      from: emailFrom,
       to: [email],
       subject: "Confirm your HeyMies account",
       html: confirmationEmailHtml({
