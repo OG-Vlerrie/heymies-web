@@ -2,12 +2,6 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 type FormState = {
   full_name: string;
@@ -277,11 +271,15 @@ function BuyerSignupClient() {
     setLoading(true);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password: form.password,
-        options: {
-          data: {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: "buyer",
+          email: form.email.trim(),
+          password: form.password,
+          next: nextUrl,
+          metadata: {
             full_name: form.full_name.trim(),
             phone: sanitizePhone(form.phone),
             lead_score_estimate: computeLeadScore(),
@@ -296,15 +294,17 @@ function BuyerSignupClient() {
             budget_min: parseOptionalNumber(form.budget_min),
             budget_max: parseOptionalNumber(form.budget_max),
           },
-        },
+        }),
       });
 
-      if (signUpError) {
-        throw new Error(signUpError.message);
+      const result = await res.json();
+
+      if (!res.ok || !result?.ok) {
+        throw new Error(result?.error ?? "Could not create your account.");
       }
 
       router.push(
-        `/signup/check-email?role=buyer${
+        `/signup/check-email?role=buyer&email=${encodeURIComponent(form.email.trim())}${
           nextUrl ? `&next=${encodeURIComponent(nextUrl)}` : ""
         }`
       );
