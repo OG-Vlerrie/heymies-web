@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
   // Auth
@@ -42,6 +43,7 @@ const STEPS = ["Account", "Profile", "Agency", "Performance", "Consent"];
 
 export default function AgentSignupPage() {
   const router = useRouter();
+  const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -161,7 +163,19 @@ export default function AgentSignupPage() {
 
     setLoading(true);
     try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: form.email.trim(),
+        password: form.password,
+      });
+
+      if (signUpError) throw new Error(signUpError.message);
+
+      const userId = data.user?.id;
+      if (!userId) throw new Error("Signup succeeded but no user returned. Try logging in.");
+
       const payload = {
+        user_id: userId,
+
         full_name: form.full_name.trim(),
         phone: sanitizePhone(form.phone),
         preferred_contact: form.preferred_contact,
@@ -186,29 +200,10 @@ export default function AgentSignupPage() {
         popia_consent: form.popia_consent,
       };
 
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          role: "agent",
-          email: form.email.trim(),
-          password: form.password,
-          metadata: {
-            full_name: payload.full_name,
-            phone: payload.phone,
-            preferred_contact: payload.preferred_contact,
-          },
-          profile: payload,
-        }),
-      });
+      const { error: insertError } = await supabase.from("agents").insert(payload);
+      if (insertError) throw new Error(insertError.message);
 
-      const result = await res.json();
-
-      if (!res.ok || !result?.ok) {
-        throw new Error(result?.error ?? "Could not create your account.");
-      }
-
-      router.push(`/signup/check-email?role=agent&email=${encodeURIComponent(form.email.trim())}`);
+      router.push("/dashboard");
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong.");
     } finally {
@@ -491,7 +486,7 @@ export default function AgentSignupPage() {
                 <ul className="mt-2 list-disc pl-5 text-slate-600">
                   <li>Your account is created.</li>
                   <li>Your agent profile is saved.</li>
-                  <li>You confirm your email before logging in.</li>
+                  <li>You land in your dashboard to finish setup.</li>
                 </ul>
               </div>
             </div>
