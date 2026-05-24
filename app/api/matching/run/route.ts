@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { scoreListingForBuyer, type BuyerMatchProfile, type MatchListing } from "@/lib/matching";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
+import { ensureEmailPreference } from "@/lib/email-preferences";
 
 type BuyerAlert = {
   id: string;
@@ -157,6 +158,7 @@ export async function POST(req: Request) {
       const alertBuyer = Array.isArray(alert.buyer) ? alert.buyer[0] : alert.buyer;
       const sent = await sendMatchEmail({
         to: buyerUser.user.email,
+        userId: event.user_id,
         buyerName: alertBuyer?.full_name ?? buyerUser.user.user_metadata?.full_name ?? null,
         alertName: alert.name,
         listing,
@@ -199,6 +201,7 @@ export async function POST(req: Request) {
 
 async function sendMatchEmail({
   to,
+  userId,
   buyerName,
   alertName,
   listing,
@@ -207,6 +210,7 @@ async function sendMatchEmail({
   origin,
 }: {
   to: string;
+  userId: string;
   buyerName: string | null;
   alertName: string;
   listing: ListingRow;
@@ -226,6 +230,14 @@ async function sendMatchEmail({
       : "price on request";
   const location = [listing.suburb, listing.city].filter(Boolean).join(", ");
   const listingUrl = `${origin}/listings/${listing.id}`;
+  const preferences = await ensureEmailPreference({
+    userId,
+    email: to,
+    topic: "match_alerts",
+    origin,
+  });
+
+  if (!preferences.allowed) return false;
 
   try {
     const response = await resend.emails.send({
@@ -250,6 +262,11 @@ async function sendMatchEmail({
           <p>This came from your alert: <strong>${escapeHtml(alertName)}</strong>.</p>
           <p><a href="${escapeHtml(listingUrl)}" style="color:#047857;font-weight:700;">View the listing</a></p>
           <p>If it feels right, you can enquire from the listing and I will help check whether it is ready for agent handover.</p>
+          <p style="margin-top: 24px; font-size: 12px; color: #64748b;">
+            <a href="${escapeHtml(preferences.manageUrl)}" style="color:#64748b;">Manage email preferences</a>
+            &nbsp;|&nbsp;
+            <a href="${escapeHtml(preferences.unsubscribeUrl)}" style="color:#64748b;">Unsubscribe from match alerts</a>
+          </p>
           <p>Warmly,<br />Mia from HeyMies</p>
         </div>
       `,

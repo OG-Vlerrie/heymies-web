@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { ensureEmailPreference } from "@/lib/email-preferences";
 
 type QualificationStatus =
   | "agent_ready"
@@ -144,6 +145,18 @@ async function run(req: NextRequest) {
 
     const responseToken = enquiry.buyer_response_token || createResponseToken();
     const message = buildNurtureMessage(enquiry, sentCount);
+    const preferences = await ensureEmailPreference({
+      userId: enquiry.user_id,
+      email: buyer.email,
+      topic: "nurture",
+      origin: requestOrigin(req),
+    });
+
+    if (!preferences.allowed) {
+      skipped += 1;
+      continue;
+    }
+
     const emailSent = dryRun
       ? true
       : await sendNurtureEmail({
@@ -152,6 +165,7 @@ async function run(req: NextRequest) {
           enquiry,
           message,
           responseToken,
+          preferences,
           origin: requestOrigin(req),
         });
 
@@ -380,6 +394,7 @@ async function sendNurtureEmail({
   enquiry,
   message,
   responseToken,
+  preferences,
   origin,
 }: {
   to: string;
@@ -387,6 +402,7 @@ async function sendNurtureEmail({
   enquiry: DueEnquiry;
   message: ReturnType<typeof buildNurtureMessage>;
   responseToken: string;
+  preferences: Awaited<ReturnType<typeof ensureEmailPreference>>;
   origin: string;
 }) {
   const firstName = buyerName?.trim().split(" ")[0] || "there";
@@ -420,6 +436,11 @@ async function sendNurtureEmail({
             ${actionLinks}
           </div>
           <p><a href="${escapeHtml(listingUrl)}" style="color:#047857;font-weight:700;">View the listing again</a></p>
+          <p style="margin-top: 24px; font-size: 12px; color: #64748b;">
+            <a href="${escapeHtml(preferences.manageUrl)}" style="color:#64748b;">Manage email preferences</a>
+            &nbsp;|&nbsp;
+            <a href="${escapeHtml(preferences.unsubscribeUrl)}" style="color:#64748b;">Unsubscribe from Mia follow-ups</a>
+          </p>
           <p>Warmly,<br />Mia from HeyMies</p>
         </div>
       `,

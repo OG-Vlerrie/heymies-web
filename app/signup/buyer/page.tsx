@@ -262,6 +262,12 @@ function BuyerSignupClient() {
     ).slice(0, 8);
   }, [areaQuery]);
 
+  function confirmationRedirect() {
+    const params = new URLSearchParams();
+    if (nextUrl) params.set("next", nextUrl);
+    return `${window.location.origin}/login${params.toString() ? `?${params.toString()}` : ""}`;
+  }
+
   async function submit() {
     setError(null);
 
@@ -281,7 +287,9 @@ function BuyerSignupClient() {
         email: form.email.trim(),
         password: form.password,
         options: {
+          emailRedirectTo: confirmationRedirect(),
           data: {
+            role: "buyer",
             full_name: form.full_name.trim(),
             phone: sanitizePhone(form.phone),
             lead_score_estimate: computeLeadScore(),
@@ -304,7 +312,7 @@ function BuyerSignupClient() {
       }
 
       router.push(
-        `/signup/check-email?role=buyer${
+        `/signup/check-email?role=buyer&email=${encodeURIComponent(form.email.trim())}${
           nextUrl ? `&next=${encodeURIComponent(nextUrl)}` : ""
         }`
       );

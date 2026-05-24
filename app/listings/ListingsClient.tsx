@@ -42,6 +42,9 @@ export default function ListingsClient({
   const [listings, setListings] = useState(initialListings);
   const [error, setError] = useState(initialError);
   const [loading, setLoading] = useState(initialListings.length === 0);
+  const [query, setQuery] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [minBeds, setMinBeds] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +80,30 @@ export default function ListingsClient({
     };
   }, [supabase]);
 
+  const filteredListings = listings.filter((listing) => {
+    const q = query.trim().toLowerCase();
+    const searchable = [
+      listing.title,
+      listing.suburb,
+      listing.city,
+      listing.listing_type,
+      listing.sale_type,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    const listingPrice =
+      listing.sale_type === "rent" ? listing.price_per_month : listing.price;
+
+    if (q && !searchable.includes(q)) return false;
+    if (maxPrice && listingPrice !== null && listingPrice !== undefined) {
+      if (listingPrice > Number(maxPrice)) return false;
+    }
+    if (minBeds && (listing.bedrooms ?? 0) < Number(minBeds)) return false;
+
+    return true;
+  });
+
   return (
     <div className="grid gap-4">
       <div className="tech-panel rounded-2xl p-4">
@@ -86,6 +113,8 @@ export default function ListingsClient({
               Search
             </label>
             <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="e.g. Sandton, 2-bed, townhouse..."
               className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none"
             />
@@ -95,7 +124,11 @@ export default function ListingsClient({
             <label className="mb-1 block text-xs font-semibold text-slate-600">
               Max price
             </label>
-            <select className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none">
+            <select
+              value={maxPrice}
+              onChange={(event) => setMaxPrice(event.target.value)}
+              className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+            >
               <option value="">Any</option>
               <option value="1500000">R1 500 000</option>
               <option value="2500000">R2 500 000</option>
@@ -108,7 +141,11 @@ export default function ListingsClient({
             <label className="mb-1 block text-xs font-semibold text-slate-600">
               Beds
             </label>
-            <select className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none">
+            <select
+              value={minBeds}
+              onChange={(event) => setMinBeds(event.target.value)}
+              className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+            >
               <option value="">Any</option>
               <option value="1">1+</option>
               <option value="2">2+</option>
@@ -134,12 +171,15 @@ export default function ListingsClient({
             />
           ))}
         </div>
-      ) : listings.length === 0 ? (
+      ) : filteredListings.length === 0 ? (
         <div className="tech-card rounded-3xl p-8">
-          <h3 className="text-xl font-semibold text-slate-950">No active listings yet</h3>
+          <h3 className="text-xl font-semibold text-slate-950">
+            {listings.length === 0 ? "No active listings yet" : "No listings match your search"}
+          </h3>
           <p className="mt-2 max-w-xl text-sm text-slate-600">
-            Once listings are published, buyers will see match scores, save homes,
-            compare shortlists, and enquire from here.
+            {listings.length === 0
+              ? "Once listings are published, buyers will see match scores, save homes, compare shortlists, and enquire from here."
+              : "Try widening the area, budget, or bedroom filters."}
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <DemoMetric label="Match scoring" value="Ready" />
@@ -149,7 +189,7 @@ export default function ListingsClient({
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {listings.map((listing) => (
+          {filteredListings.map((listing) => (
             <ListingCard key={listing.id} listing={listing} />
           ))}
         </div>

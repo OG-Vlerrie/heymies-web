@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { scoreListingForBuyer, type BuyerMatchProfile, type MatchListing } from "@/lib/matching";
+import { ensureEmailPreference } from "@/lib/email-preferences";
 
 const DEFAULT_MESSAGE =
   "Hi, I'm interested in this property and would like more information.";
@@ -269,6 +270,15 @@ export async function POST(req: NextRequest) {
       if (!email) return;
 
       try {
+        const preferences = await ensureEmailPreference({
+          userId: user?.id,
+          email,
+          topic: "nurture",
+          origin: requestOrigin(req),
+        });
+
+        if (!preferences.allowed) return;
+
         const firstName = fullName.trim().split(" ")[0] || "there";
         const safeBody = escapeHtml(params.body).replaceAll("\n", "<br />");
         const actionLinks = params.responseActions
@@ -298,6 +308,11 @@ export async function POST(req: NextRequest) {
                 <p style="margin-top: 0;"><strong>You can reply with one click:</strong></p>
                 ${actionLinks}
               </div>
+              <p style="margin-top: 24px; font-size: 12px; color: #64748b;">
+                <a href="${escapeHtml(preferences.manageUrl)}" style="color:#64748b;">Manage email preferences</a>
+                &nbsp;|&nbsp;
+                <a href="${escapeHtml(preferences.unsubscribeUrl)}" style="color:#64748b;">Unsubscribe from Mia follow-ups</a>
+              </p>
               <p>Warmly,<br />Mia from HeyMies</p>
             </div>
           `,

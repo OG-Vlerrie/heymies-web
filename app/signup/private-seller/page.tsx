@@ -130,6 +130,10 @@ export default function PrivateSellerSignupPage() {
     return Number.isFinite(n) ? n : null;
   }
 
+  function confirmationRedirect() {
+    return `${window.location.origin}/login`;
+  }
+
   function validateStep(s: number): string | null {
     if (s === 0) {
       if (!form.email.includes("@")) return "Enter a valid email.";
@@ -198,19 +202,8 @@ export default function PrivateSellerSignupPage() {
 
     setLoading(true);
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password: form.password,
-      });
-
-      if (signUpError) throw new Error(signUpError.message);
-
-      const userId = data.user?.id;
-      if (!userId) throw new Error("Signup succeeded but no user returned. Try logging in.");
-
       const payload = {
-        user_id: userId,
-
+        role: "seller",
         full_name: form.full_name.trim(),
         phone: sanitizePhone(form.phone),
         preferred_contact: form.preferred_contact,
@@ -249,10 +242,20 @@ export default function PrivateSellerSignupPage() {
         popia_consent: form.popia_consent,
       };
 
-      const { error: insertError } = await supabase.from("private_sellers").insert(payload);
-      if (insertError) throw new Error(insertError.message);
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: form.email.trim(),
+        password: form.password,
+        options: {
+          emailRedirectTo: confirmationRedirect(),
+          data: payload,
+        },
+      });
 
-      router.push("/dashboard");
+      if (signUpError) throw new Error(signUpError.message);
+
+      router.push(
+        `/signup/check-email?role=seller&email=${encodeURIComponent(form.email.trim())}`
+      );
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong.");
     } finally {
