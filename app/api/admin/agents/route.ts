@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-function supabaseAdmin() {
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: { persistSession: false },
-  });
-}
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function PATCH(req: Request) {
   try {
@@ -21,7 +15,7 @@ export async function PATCH(req: Request) {
     const sb = supabaseAdmin();
     const { error } = await sb.from("agents").update({ status }).eq("id", id);
 
-    if (error) return NextResponse.json({ ok: false, error: "DB error" }, { status: 500 });
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });
   } catch {
@@ -37,7 +31,7 @@ export async function DELETE(req: Request) {
     const sb = supabaseAdmin();
     const { error } = await sb.from("agents").delete().eq("id", id);
 
-    if (error) return NextResponse.json({ ok: false, error: "DB error" }, { status: 500 });
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
     return NextResponse.json({ ok: true });
   } catch {

@@ -24,7 +24,7 @@ export function middleware(req: NextRequest) {
   const base64 = auth.split(" ")[1] || "";
   let decoded = "";
   try {
-    decoded = Buffer.from(base64, "base64").toString("utf8");
+    decoded = atob(base64);
   } catch {
     return unauthorized();
   }
