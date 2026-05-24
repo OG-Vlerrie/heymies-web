@@ -155,7 +155,12 @@ export default function AdminListingsTable({ initialListings }: { initialListing
                       </div>
                     )}
                     <div>
-                      <p className="font-semibold text-slate-900">{listing.title ?? "Untitled listing"}</p>
+                      <Link
+                        href={`/admin/listings/${listing.id}`}
+                        className="font-semibold text-slate-900 underline-offset-4 hover:underline"
+                      >
+                        {listing.title ?? "Untitled listing"}
+                      </Link>
                       <p className="mt-1 text-xs text-slate-500">
                         {listing.listing_type ?? "property"} / {listing.sale_type ?? "sale"} /{" "}
                         {listing.created_at ? formatDate(listing.created_at) : "-"}
@@ -227,6 +232,12 @@ export default function AdminListingsTable({ initialListings }: { initialListing
                         Public
                       </Link>
                     ) : null}
+                    <Link
+                      href={`/admin/listings/${listing.id}`}
+                      className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold hover:bg-slate-50"
+                    >
+                      Edit
+                    </Link>
                   </div>
                 </td>
               </tr>

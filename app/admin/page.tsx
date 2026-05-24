@@ -171,6 +171,18 @@ export default async function AdminPage() {
 
             <div className="flex flex-wrap gap-3">
               <Link
+                href="/admin/health"
+                className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
+              >
+                System Health
+              </Link>
+              <Link
+                href="/admin/qa"
+                className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
+              >
+                QA Checklist
+              </Link>
+              <Link
                 href="/admin/mia"
                 className="tech-button-primary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
               >
@@ -213,11 +225,32 @@ export default async function AdminPage() {
 
         <section className="mt-6 grid gap-4 lg:grid-cols-3">
           <AdminCard
+            title="Reports"
+            body="Review weekly performance, admin audit activity, lead outcomes, and export CSV reports."
+            href="/admin/reports"
+            stat="Metrics"
+          />
+          <AdminCard
+            title="QA checklist"
+            body="Run repeatable production checks for signup, listings, Mia, preferences, and matching."
+            href="/admin/qa"
+            stat="Manual test"
+          />
+          <AdminCard
+            title="Lead pipeline"
+            body="Work enquiries by stage, pause or resume Mia, mark agent-ready, and close won or lost."
+            href="/admin/pipeline"
+            stat={`${agentReadyCount.count ?? 0} ready`}
+          />
+          <AdminCard
             title="Mia"
             body="See follow-ups, buyer clicks, paused nurture, agent-ready leads, and run Mia manually."
             href="/admin/mia"
             stat={`${dueNurtureCount.count ?? 0} due`}
           />
+        </section>
+
+        <section className="mt-4 grid gap-4 lg:grid-cols-3">
           <AdminCard
             title="Listings"
             body="Review active, draft, and inactive listings, spot missing photos, and control publication status."
@@ -225,14 +258,17 @@ export default async function AdminPage() {
             stat={`${listingsDraftCount.count ?? 0} drafts`}
           />
           <AdminCard
+            title="System health"
+            body="Check email config, Supabase access, cron readiness, nurture backlog, and matching activity."
+            href="/admin/health"
+            stat="Live checks"
+          />
+          <AdminCard
             title="Users"
             body="Check confirmed signups, profile roles, contact details, and email preference health."
             href="/admin/users"
             stat={`${buyersCount.count ?? 0} buyers`}
           />
-        </section>
-
-        <section className="mt-4 grid gap-4 lg:grid-cols-3">
           <AdminCard
             title="Agent applications"
             body="Approve, reject, or review agent onboarding applications."

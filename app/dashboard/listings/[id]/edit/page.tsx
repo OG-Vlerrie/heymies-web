@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { getListingQuality } from "@/lib/listing-quality";
 
 const LISTING_TYPES = [
   "house",
@@ -418,6 +419,32 @@ export default function EditListingPage() {
 
       const salePrice = saleType === "sale" ? priceNum : null;
       const rentPerMonth = saleType === "rent" ? priceNum : null;
+
+      if (nextStatus === "active") {
+        const quality = getListingQuality({
+          agent_id: userId,
+          title,
+          description,
+          sale_type: saleType,
+          listing_type: listingType,
+          price: salePrice,
+          price_per_month: rentPerMonth,
+          suburb,
+          city,
+          province,
+          bedrooms: cleanInt(bedrooms),
+          bathrooms: cleanNumber(bathrooms),
+          contact_email: contactEmail,
+          contact_phone: contactPhone,
+          images: mergedImages,
+          cover_image: finalCover,
+        });
+
+        if (!quality.isPublishable) {
+          setSaving(false);
+          return setError(`This listing is not Mia-ready yet. Missing: ${quality.blocking.join(", ")}.`);
+        }
+      }
 
       const { error: upErr } = await supabase
         .from("listings")

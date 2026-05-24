@@ -82,23 +82,36 @@ async function run(req: NextRequest) {
   const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
   const limitParam = req.nextUrl.searchParams.get("limit") ?? body?.limit;
   const dryRunParam = req.nextUrl.searchParams.get("dryRun") ?? body?.dryRun;
+  const enquiryId = (req.nextUrl.searchParams.get("enquiryId") ?? body?.enquiryId ?? "")
+    .toString()
+    .trim();
+  const forceParam = req.nextUrl.searchParams.get("force") ?? body?.force;
   const limit = Math.max(1, Math.min(Number(limitParam) || 50, 100));
   const dryRun = dryRunParam === true || dryRunParam === "true";
+  const force = forceParam === true || forceParam === "true";
   const now = new Date();
   const nowIso = now.toISOString();
   const sb = supabaseAdmin();
 
-  const { data, error } = await sb
+  let query = sb
     .from("enquiries")
     .select(
       "id,user_id,listing_id,full_name,email,phone,latest_message,request_viewing,enquiry_count,readiness_score,property_fit_score,qualification_status,qualification_summary,next_action,nurture_status,next_nurture_at,last_nurtured_at,last_buyer_response,buyer_response_token,buyer_response_token_created_at,listing:listings(id,title,suburb,city,price,price_per_month,sale_type)"
     )
     .in("qualification_status", DUE_STATUSES)
-    .or("nurture_status.eq.nurturing,nurture_status.eq.pending")
-    .not("next_nurture_at", "is", null)
-    .lte("next_nurture_at", nowIso)
-    .order("next_nurture_at", { ascending: true })
-    .limit(limit);
+    .or("nurture_status.eq.nurturing,nurture_status.eq.pending");
+
+  if (enquiryId) {
+    query = query.eq("id", enquiryId).limit(1);
+  } else {
+    query = query
+      .not("next_nurture_at", "is", null)
+      .lte("next_nurture_at", nowIso)
+      .order("next_nurture_at", { ascending: true })
+      .limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
@@ -126,7 +139,7 @@ async function run(req: NextRequest) {
       continue;
     }
 
-    if (wasNurturedRecently(enquiry.last_nurtured_at, now)) {
+    if (!force && wasNurturedRecently(enquiry.last_nurtured_at, now)) {
       skipped += 1;
       continue;
     }
@@ -218,6 +231,8 @@ async function run(req: NextRequest) {
   return NextResponse.json({
     ok: errors.length === 0,
     dryRun,
+    force,
+    enquiryId: enquiryId || null,
     checked: enquiries.length,
     sent,
     paused,

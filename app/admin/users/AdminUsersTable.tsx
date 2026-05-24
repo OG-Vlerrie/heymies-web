@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type AdminUser = {
@@ -134,6 +135,14 @@ export default function AdminUsersTable({ initialUsers }: { initialUsers: AdminU
                   ) : null}
                   {user.phone ? <p className="mt-1 text-xs text-slate-500">{user.phone}</p> : null}
                   <p className="mt-1 max-w-48 truncate text-xs text-slate-400">{user.id}</p>
+                  {normalizeRole(user.role) === "buyer" ? (
+                    <Link
+                      href={`/admin/buyers/${user.id}`}
+                      className="mt-2 inline-flex text-xs font-semibold text-emerald-700"
+                    >
+                      Buyer memory
+                    </Link>
+                  ) : null}
                 </td>
                 <td className="px-4 py-3">
                   <StatusPill status={user.role ?? "missing"} />

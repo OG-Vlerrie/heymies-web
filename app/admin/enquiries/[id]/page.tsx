@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import AdminEnquiryActions from "./AdminEnquiryActions";
+import AdminHandoverPack from "./AdminHandoverPack";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type Enquiry = {
@@ -168,6 +169,12 @@ export default async function AdminEnquiryDetailPage({ params }: { params: { id:
           </div>
           <div className="flex flex-wrap gap-3">
             <Link
+              href="/admin/pipeline"
+              className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
+            >
+              Lead pipeline
+            </Link>
+            <Link
               href="/admin/mia"
               className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
             >
@@ -268,6 +275,8 @@ export default async function AdminEnquiryDetailPage({ params }: { params: { id:
               ) : null}
             </section>
 
+            <AdminHandoverPack pack={buildHandoverPack({ enquiry, buyer, agent })} />
+
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold">Mia Activity</h2>
               {eventsResult.error ? (
@@ -300,6 +309,14 @@ export default async function AdminEnquiryDetailPage({ params }: { params: { id:
 
             <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold">Buyer Profile</h2>
+              {enquiry.user_id ? (
+                <Link
+                  href={`/admin/buyers/${enquiry.user_id}`}
+                  className="mt-2 inline-flex text-sm font-semibold text-emerald-700"
+                >
+                  Open buyer memory
+                </Link>
+              ) : null}
               <div className="mt-5 space-y-3">
                 <Detail label="Name" value={enquiry.full_name ?? buyer?.full_name ?? "-"} />
                 <Detail label="Email" value={enquiry.email ?? "-"} />
@@ -466,4 +483,56 @@ function normalizeRelation<T extends Record<string, any>>(row: T, key: string) {
     ...row,
     [key]: Array.isArray(row[key]) ? row[key][0] : row[key],
   } as T;
+}
+
+function buildHandoverPack({
+  enquiry,
+  buyer,
+  agent,
+}: {
+  enquiry: Enquiry;
+  buyer: Buyer | null;
+  agent: ProfileRow | null;
+}) {
+  const lines = [
+    "HEYMIES AGENT HANDOVER",
+    "",
+    `Buyer: ${enquiry.full_name ?? buyer?.full_name ?? "-"}`,
+    `Email: ${enquiry.email ?? "-"}`,
+    `Phone: ${enquiry.phone ?? buyer?.phone ?? "-"}`,
+    "",
+    `Listing: ${enquiry.listing?.title ?? "-"}`,
+    `Area: ${[enquiry.listing?.suburb, enquiry.listing?.city, enquiry.listing?.province].filter(Boolean).join(", ") || "-"}`,
+    `Price: ${formatPrice(enquiry)}`,
+    `Listing status: ${enquiry.listing?.status ?? "-"}`,
+    "",
+    `Readiness: ${enquiry.readiness_score ?? buyer?.lead_score ?? 0}/100`,
+    `Property fit: ${enquiry.property_fit_score ?? 0}%`,
+    `Qualification: ${enquiry.qualification_status ?? "-"}`,
+    `Viewing requested: ${enquiry.request_viewing ? "Yes" : "No"}`,
+    `Enquiry count: ${enquiry.enquiry_count ?? 1}`,
+    "",
+    `Mia read: ${enquiry.qualification_summary ?? "Pending"}`,
+    `Recommended next action: ${enquiry.next_action ?? "Review manually"}`,
+    "",
+    "Buyer profile",
+    `Budget: ${formatBudget(buyer)}`,
+    `Areas: ${formatList(buyer?.areas_multi ?? buyer?.areas)}`,
+    `Property types: ${formatList(buyer?.property_types)}`,
+    `Minimum beds/baths: ${buyer?.bedrooms_min ?? "-"} / ${buyer?.bathrooms_min ?? "-"}`,
+    `Finance: ${buyer?.preapproved ?? "-"}`,
+    `Timeline: ${buyer?.timeline ?? "-"}`,
+    `Needs to sell first: ${buyer?.selling_property ?? "-"}`,
+    "",
+    "Latest buyer message",
+    enquiry.latest_message ?? "No message provided.",
+    "",
+    "Assigned owner/agent",
+    `Profile: ${agent?.full_name ?? enquiry.agent_id ?? "-"}`,
+    `Listing contact: ${enquiry.listing?.contact_name ?? "-"}`,
+    `Contact email: ${enquiry.listing?.contact_email ?? "-"}`,
+    `Contact phone: ${enquiry.listing?.contact_phone ?? "-"}`,
+  ];
+
+  return lines.join("\n");
 }
