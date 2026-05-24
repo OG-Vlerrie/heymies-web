@@ -53,7 +53,7 @@ export default function QualityPanel({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Matcher failed");
       setResult(
-        `Checked ${data.listingsChecked} listings and ${data.alertsChecked} alerts. Created ${data.eventsCreated} events.`
+        `Checked ${data.listingsChecked} listings and ${data.alertsChecked} alerts. Created ${data.eventsCreated} events and sent ${data.emailsSent ?? 0} emails.`
       );
     } catch (e: any) {
       setResult(e?.message ?? "Matcher failed.");

@@ -459,6 +459,14 @@ export default function NewListingPage() {
       const { error: upErr } = await supabase.from("listings").update({ images: urls, cover_image: cover }).eq("id", listingId);
       if (upErr) throw upErr;
 
+      fetch("/api/matching/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId, minScore: 55 }),
+      }).catch((matchError) => {
+        console.error("Failed to run buyer matching:", matchError);
+      });
+
       setLoading(false);
       router.push("/dashboard/listings");
     } catch (e: any) {
