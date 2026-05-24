@@ -18,6 +18,11 @@ type EnquiryLead = {
   enquiry_count: number;
   latest_message: string | null;
   request_viewing: boolean;
+  property_fit_score: number | null;
+  readiness_score: number | null;
+  qualification_status: string | null;
+  qualification_summary: string | null;
+  next_action: string | null;
   first_enquired_at: string;
   last_enquired_at: string;
   listing_id: string;
@@ -79,6 +84,23 @@ function oneRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value ?? undefined;
 }
 
+function qualificationLabel(status: string) {
+  switch (status) {
+    case "agent_ready":
+      return "Agent-ready";
+    case "needs_finance_nurture":
+      return "Finance nurture";
+    case "needs_confirmation":
+      return "Needs confirmation";
+    case "nurture_for_better_fit":
+      return "Better-fit nurture";
+    case "not_ready":
+      return "Not ready";
+    default:
+      return status.replaceAll("_", " ");
+  }
+}
+
 export default function DashboardLeadsPage() {
   const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
@@ -124,7 +146,7 @@ export default function DashboardLeadsPage() {
       const { data, error: lErr } = await supabase
         .from("enquiries")
         .select(
-          "id, user_id, full_name, email, phone, status, enquiry_count, latest_message, request_viewing, first_enquired_at, last_enquired_at, listing_id, listing:listings(id,title,suburb,city,cover_image,price,price_per_month,sale_type,listing_type,bedrooms,bathrooms,status)"
+          "id, user_id, full_name, email, phone, status, enquiry_count, latest_message, request_viewing, property_fit_score, readiness_score, qualification_status, qualification_summary, next_action, first_enquired_at, last_enquired_at, listing_id, listing:listings(id,title,suburb,city,cover_image,price,price_per_month,sale_type,listing_type,bedrooms,bathrooms,status)"
         )
         .eq("agent_id", user.id)
         .order("last_enquired_at", { ascending: false })
@@ -242,7 +264,9 @@ export default function DashboardLeadsPage() {
               {filtered.map((l) => {
                 const buyer = l.user_id ? buyersByUserId[l.user_id] : null;
                 const fit =
-                  buyer && l.listing
+                  l.property_fit_score !== null && l.property_fit_score !== undefined
+                    ? { score: l.property_fit_score, reasons: [] }
+                    : buyer && l.listing
                     ? scoreListingForBuyer(
                         {
                           id: l.listing.id,
@@ -259,6 +283,7 @@ export default function DashboardLeadsPage() {
                         buyer
                       )
                     : null;
+                const readiness = l.readiness_score ?? buyer?.lead_score ?? null;
 
                 return (
                 <li key={l.id} className="p-4 hover:bg-slate-50">
@@ -302,16 +327,22 @@ export default function DashboardLeadsPage() {
                           ) : null}
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
+                          {l.qualification_status ? (
+                            <QualityPill
+                              label={qualificationLabel(l.qualification_status)}
+                              tone={l.qualification_status === "agent_ready" ? "good" : "neutral"}
+                            />
+                          ) : null}
                           <QualityPill
                             label={
-                              buyer?.lead_score !== null && buyer?.lead_score !== undefined
-                                ? `Readiness ${buyer.lead_score}/100`
+                              readiness !== null && readiness !== undefined
+                                ? `Readiness ${readiness}/100`
                                 : "Readiness unknown"
                             }
                             tone={
-                              (buyer?.lead_score ?? 0) >= 70
+                              (readiness ?? 0) >= 70
                                 ? "good"
-                                : (buyer?.lead_score ?? 0) >= 45
+                                : (readiness ?? 0) >= 45
                                 ? "warn"
                                 : "neutral"
                             }
@@ -335,7 +366,9 @@ export default function DashboardLeadsPage() {
                       <div className="flex shrink-0 flex-col items-end gap-3">
                         <StatusPill status={l.status} />
                         <span className="text-xs text-slate-500">
-                          Intent: {l.request_viewing || l.enquiry_count > 1 ? "High" : "New"}
+                          {l.qualification_status === "agent_ready"
+                            ? "Handover ready"
+                            : `Intent: ${l.request_viewing || l.enquiry_count > 1 ? "High" : "New"}`}
                         </span>
                       </div>
                     </div>

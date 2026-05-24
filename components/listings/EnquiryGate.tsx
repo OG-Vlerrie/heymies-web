@@ -26,6 +26,7 @@ export default function EnquiryGate({ listingId }: { listingId: string }) {
 
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState<null | "created" | "updated">(null);
+  const [qualificationStatus, setQualificationStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const nextUrl = `${pathname}#enquire`;
@@ -95,6 +96,7 @@ export default function EnquiryGate({ listingId }: { listingId: string }) {
       }
 
       setDone(json.mode === "updated" ? "updated" : "created");
+      setQualificationStatus(json.qualification_status ?? null);
       setMessage("");
       setViewing(false);
     } catch (err) {
@@ -144,26 +146,34 @@ export default function EnquiryGate({ listingId }: { listingId: string }) {
   }
 
   if (done === "created") {
+    const agentReady = qualificationStatus === "agent_ready";
+
     return (
       <div className="rounded-2xl border border-emerald-200 bg-white p-5">
         <h3 className="text-base font-semibold text-slate-900">
           Enquiry sent
         </h3>
         <p className="mt-2 text-sm text-slate-600">
-          Your enquiry has been sent. The agent has been notified and should contact you soon.
+          {agentReady
+            ? "Your enquiry has been qualified and sent to the agent. They should contact you soon."
+            : "Your enquiry has been received. HeyMies is checking your buyer profile and will guide the next step."}
         </p>
       </div>
     );
   }
 
   if (done === "updated") {
+    const agentReady = qualificationStatus === "agent_ready";
+
     return (
       <div className="rounded-2xl border border-emerald-200 bg-white p-5">
         <h3 className="text-base font-semibold text-slate-900">
           Enquiry updated
         </h3>
         <p className="mt-2 text-sm text-slate-600">
-          Your enquiry has been updated and the agent has been notified again.
+          {agentReady
+            ? "Your updated enquiry has been qualified and sent to the agent again."
+            : "Your enquiry has been updated. HeyMies will keep helping you move toward an agent-ready handover."}
         </p>
       </div>
     );

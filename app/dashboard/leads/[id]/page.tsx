@@ -16,6 +16,11 @@ type Enquiry = {
   enquiry_count: number;
   latest_message: string | null;
   request_viewing: boolean;
+  property_fit_score: number | null;
+  readiness_score: number | null;
+  qualification_status: string | null;
+  qualification_summary: string | null;
+  next_action: string | null;
   first_enquired_at: string;
   last_enquired_at: string;
   listing_id: string;
@@ -47,6 +52,23 @@ type BuyerProfile = BuyerMatchProfile & {
 
 function oneRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value ?? undefined;
+}
+
+function qualificationLabel(status: string) {
+  switch (status) {
+    case "agent_ready":
+      return "Agent-ready";
+    case "needs_finance_nurture":
+      return "Finance nurture";
+    case "needs_confirmation":
+      return "Needs confirmation";
+    case "nurture_for_better_fit":
+      return "Better-fit nurture";
+    case "not_ready":
+      return "Not ready";
+    default:
+      return status.replaceAll("_", " ");
+  }
 }
 
 function formatZAR(n: number) {
@@ -103,7 +125,7 @@ export default function LeadDetailPage() {
     const { data, error: enquiryErr } = await supabase
       .from("enquiries")
       .select(
-        "id,user_id,full_name,email,phone,status,enquiry_count,latest_message,request_viewing,first_enquired_at,last_enquired_at,listing_id, listing:listings(id,title,price,price_per_month,sale_type,listing_type,suburb,city,bedrooms,bathrooms,cover_image,status)"
+        "id,user_id,full_name,email,phone,status,enquiry_count,latest_message,request_viewing,property_fit_score,readiness_score,qualification_status,qualification_summary,next_action,first_enquired_at,last_enquired_at,listing_id, listing:listings(id,title,price,price_per_month,sale_type,listing_type,suburb,city,bedrooms,bathrooms,cover_image,status)"
       )
       .eq("id", leadId)
       .eq("agent_id", user.id)
@@ -135,7 +157,12 @@ export default function LeadDetailPage() {
       setBuyer(nextBuyer);
 
       if (nextBuyer && nextEnquiry.listing) {
-        setFit(scoreListingForBuyer(nextEnquiry.listing, nextBuyer));
+        setFit(
+          nextEnquiry.property_fit_score !== null &&
+            nextEnquiry.property_fit_score !== undefined
+            ? { score: nextEnquiry.property_fit_score, reasons: [] }
+            : scoreListingForBuyer(nextEnquiry.listing, nextBuyer)
+        );
       }
     }
 
@@ -216,6 +243,12 @@ export default function LeadDetailPage() {
                   <p className="mt-3 text-2xl font-semibold">{formatPrice(enquiry.listing)}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <QualityPill label={`Status: ${enquiry.status}`} tone="neutral" />
+                    {enquiry.qualification_status ? (
+                      <QualityPill
+                        label={qualificationLabel(enquiry.qualification_status)}
+                        tone={enquiry.qualification_status === "agent_ready" ? "good" : "neutral"}
+                      />
+                    ) : null}
                     <QualityPill
                       label={enquiry.request_viewing ? "Viewing requested" : "Info requested"}
                       tone={enquiry.request_viewing ? "good" : "neutral"}
@@ -240,7 +273,7 @@ export default function LeadDetailPage() {
               <section className="tech-card rounded-3xl p-6">
                 <h2 className="text-lg font-semibold">Buyer readiness</h2>
                 <div className="mt-4 space-y-3">
-                  <Metric label="Lead score" value={`${buyer?.lead_score ?? 0}/100`} />
+                  <Metric label="Readiness score" value={`${enquiry.readiness_score ?? buyer?.lead_score ?? 0}/100`} />
                   <Metric label="Property fit" value={fit ? `${fit.score}%` : "Pending"} />
                   <Metric label="Bond status" value={buyer?.preapproved ?? "-"} />
                   <Metric label="Timeline" value={buyer?.timeline ?? "-"} />
@@ -253,6 +286,14 @@ export default function LeadDetailPage() {
                     ))}
                   </div>
                 ) : null}
+              </section>
+
+              <section className="tech-card rounded-3xl p-6">
+                <h2 className="text-lg font-semibold">HeyMies qualification</h2>
+                <div className="mt-4 space-y-3 text-sm">
+                  <Metric label="Summary" value={enquiry.qualification_summary ?? "Pending"} />
+                  <Metric label="Next action" value={enquiry.next_action ?? "Review manually"} />
+                </div>
               </section>
 
               <section className="tech-card rounded-3xl p-6">
