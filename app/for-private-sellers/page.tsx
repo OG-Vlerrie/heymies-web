@@ -1,91 +1,97 @@
-import {
-  TechCard,
-  TechFooter,
-  TechHero,
-  TechSection,
-} from "@/components/TechPage";
 import Link from "next/link";
+import { TechCard, TechFooter, TechHero, TechSection } from "@/components/TechPage";
+
+const steps = [
+  ["Tell us about the home", "Capture location, price, size, viewing access, and seller context during signup."],
+  ["Get a draft listing", "HeyMies turns the signup details into a private draft listing after email confirmation."],
+  ["Add photos and publish", "Review the draft, add up to 50 images, then publish when the listing is ready."],
+  ["Let Mia qualify interest", "Buyer enquiries are checked before they become real conversations."],
+];
 
 export default function PrivateSellersPage() {
   return (
     <main className="tech-page">
       <TechHero
-        eyebrow="Private sellers"
-        title="Sell privately without the chaos."
-        subtitle="HeyMies helps private sellers filter buyer noise, structure the process, and move toward real offers faster."
-        primary={{ href: "/signup/private-seller", label: "Join as a seller" }}
-        secondary={{ href: "/how-it-works", label: "How it works" }}
+        eyebrow="For private sellers"
+        title="Start with signup. Leave with a draft listing."
+        subtitle="HeyMies turns your seller signup details into a property draft, then helps filter and nurture buyer interest before you spend time on viewings."
+        primary={{ href: "/signup/private-seller", label: "Create seller listing" }}
+        secondary={{ href: "/how-it-works", label: "How Mia qualifies buyers" }}
         graphic="property"
       />
 
-      <TechSection title="What you get" tone="alt">
+      <TechSection title="Built for sellers who want control" tone="alt">
         <div className="grid gap-5 md:grid-cols-3">
-          <Card
-            title="Fewer time-wasters"
-            body="We capture intent early so you spend time on serious buyers."
+          <SellerCard
+            title="No duplicate entry"
+            body="Your signup property details become the first version of your listing."
           />
-          <Card
-            title="A structured process"
-            body="Clear steps: details, qualification, viewings, offers and follow-ups."
+          <SellerCard
+            title="Draft first"
+            body="Nothing goes public until you review the details, add photos, and publish."
           />
-          <Card
-            title="More control"
-            body="You decide who gets viewings and when, without constant back-and-forth."
+          <SellerCard
+            title="Cleaner enquiries"
+            body="Mia checks buyer fit and readiness so viewings start with better context."
           />
         </div>
       </TechSection>
 
-      <TechSection title="How it works">
-        <div className="grid gap-5 md:grid-cols-3">
-          <Step
-            n="1"
-            title="Create your listing profile"
-            body="Tell us the basics: location, price, size, and key features."
-          />
-          <Step
-            n="2"
-            title="We qualify enquiries"
-            body="Buyers submit budget, timeline, and readiness so you get cleaner leads."
-          />
-          <Step
-            n="3"
-            title="Move to viewings and offers"
-            body="Shortlist the right buyers faster and with less noise."
-          />
+      <TechSection title="The seller flow">
+        <div className="grid gap-5 md:grid-cols-4">
+          {steps.map(([title, body], index) => (
+            <TechCard key={title}>
+              <p className="tech-kicker">Step {index + 1}</p>
+              <h2 className="mt-3 text-lg font-semibold">{title}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-700">{body}</p>
+            </TechCard>
+          ))}
         </div>
+      </TechSection>
 
-        <div className="mt-10">
-          <Link
-            href="/signup/private-seller"
-            className="tech-button-primary inline-flex rounded-xl px-7 py-3 text-sm font-semibold"
-          >
-            Get started
+      <TechSection title="What Mia protects you from" tone="alt">
+        <div className="grid gap-5 md:grid-cols-2">
+          <TechCard>
+            <h2 className="text-xl font-semibold">Before HeyMies</h2>
+            <ul className="mt-4 space-y-2 text-sm text-slate-700">
+              <li>Repeated questions from buyers who are not ready.</li>
+              <li>Viewing requests without finance or budget clarity.</li>
+              <li>Manual follow-up after every enquiry.</li>
+            </ul>
+          </TechCard>
+          <TechCard>
+            <h2 className="text-xl font-semibold">With HeyMies</h2>
+            <ul className="mt-4 space-y-2 text-sm text-slate-700">
+              <li>Buyer profile, fit, and intent are checked first.</li>
+              <li>Mia keeps uncertain buyers warm without pressure.</li>
+              <li>Serious interest is easier to spot and act on.</li>
+            </ul>
+          </TechCard>
+        </div>
+      </TechSection>
+
+      <section className="tech-hero px-4 py-16 text-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-3xl font-semibold">Create the draft. Publish when ready.</h2>
+            <p className="mt-3 text-slate-300">Your first listing starts from your seller signup.</p>
+          </div>
+          <Link href="/signup/private-seller" className="tech-button-primary rounded-xl px-6 py-3 text-sm font-semibold">
+            Start seller signup
           </Link>
         </div>
-      </TechSection>
+      </section>
 
       <TechFooter />
     </main>
   );
 }
 
-function Card({ title, body }: { title: string; body: string }) {
+function SellerCard({ title, body }: { title: string; body: string }) {
   return (
     <TechCard>
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="mt-3 text-sm text-slate-700">{body}</p>
-    </TechCard>
-  );
-}
-
-function Step({ n, title, body }: { n: string; title: string; body: string }) {
-  return (
-    <TechCard>
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-        Step {n}
-      </div>
-      <h3 className="mt-2 text-lg font-semibold">{title}</h3>
-      <p className="mt-3 text-sm text-slate-700">{body}</p>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-700">{body}</p>
     </TechCard>
   );
 }

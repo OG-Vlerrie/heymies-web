@@ -11,8 +11,8 @@ export default function ContactPage() {
     <main className="tech-page">
       <TechHero
         eyebrow="Contact"
-        title="Let's talk about better leads."
-        subtitle="Have a question about HeyMies, pricing, or early access? Send a message and we'll get back to you."
+        title="Want to understand where HeyMies fits?"
+        subtitle="Ask about buyer matching, seller listings, agent handover, pilot access, or how Mia can nurture leads before your team gets involved."
         primary={{ href: "/signup", label: "Join HeyMies" }}
         secondary={{ href: "/pricing", label: "View pricing" }}
         graphic="contact"
@@ -60,8 +60,8 @@ export default function ContactPage() {
       </TechSection>
 
       <TechCTA
-        title="Want to see HeyMies in action?"
-        body="Join early access and get started."
+        title="Ready to try the flow?"
+        body="Create the account type that matches your journey and HeyMies will guide the next step."
         href="/signup"
         label="Join HeyMies"
       />

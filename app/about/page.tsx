@@ -11,8 +11,8 @@ export default function AboutPage() {
     <main className="tech-page">
       <TechHero
         eyebrow="About HeyMies"
-        title="A smarter operating layer for real estate leads."
-        subtitle="HeyMies filters, scores, and nurtures property leads so agents and sellers can focus on real conversations with real momentum."
+        title="HeyMies is the follow-up layer between interest and action."
+        subtitle="We help buyers move at their own pace, sellers create cleaner listings, and agents receive leads when they are actually worth the call."
         primary={{ href: "/signup", label: "Join HeyMies" }}
         secondary={{ href: "/how-it-works", label: "See how it works" }}
         graphic="score"
@@ -22,27 +22,26 @@ export default function AboutPage() {
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4 text-slate-700">
             <p>
-              HeyMies is a real estate technology platform built to help property
-              professionals focus on what closes deals: qualified buyers, useful
-              context, and timely hand-offs.
+              HeyMies is a real estate technology platform built around one simple
+              belief: every property enquiry needs context before it becomes an
+              agent conversation.
             </p>
             <p>
-              The South African real estate market is noisy. Agents are flooded
-              with enquiries that go nowhere, admin eats into selling time, and
-              lead quality is unpredictable. HeyMies exists to fix that.
+              Buyers want help without pressure. Sellers want serious interest,
+              not noise. Agents want to know who is worth calling first. Mia from
+              HeyMies helps coordinate that middle ground.
             </p>
             <p>
-              We filter, score, and nurture property leads using intelligent
-              automation, then deliver ready-to-engage prospects at the right
-              moment.
+              We match listings, qualify enquiries, nurture uncertain buyers, and
+              hand over ready opportunities with a clear summary and next action.
             </p>
           </div>
           <TechCard>
             <p className="tech-kicker">Platform signal</p>
             <div className="mt-5 grid gap-3">
-              <Metric label="Lead quality" value="High intent" />
-              <Metric label="Agent workload" value="Reduced admin" />
-              <Metric label="Buyer journey" value="Guided follow-up" />
+              <Metric label="Buyer journey" value="Guided by Mia" />
+              <Metric label="Seller flow" value="Draft to publish" />
+              <Metric label="Agent handover" value="Ready with context" />
             </div>
           </TechCard>
         </div>
@@ -50,21 +49,21 @@ export default function AboutPage() {
 
       <TechSection title="What we do">
         <div className="grid gap-4 md:grid-cols-2">
-          <TechCard>Capture and organise buyer enquiries</TechCard>
-          <TechCard>Filter low-intent and poor-quality leads</TechCard>
-          <TechCard>Nurture genuine buyers automatically</TechCard>
-          <TechCard>Score readiness and timing before hand-off</TechCard>
+          <TechCard>Turn buyer profiles into better listing matches</TechCard>
+          <TechCard>Create seller draft listings from signup details</TechCard>
+          <TechCard>Ask buyers the follow-up questions agents need answered</TechCard>
+          <TechCard>Hand over qualified leads with readiness and fit context</TechCard>
         </div>
       </TechSection>
 
       <TechSection title="Our principles" tone="alt">
         <div className="grid gap-4 md:grid-cols-3">
           {[
-            ["Simplicity", "Easy to use. No bloat."],
-            ["Precision", "Fewer leads, higher intent."],
-            ["Trust", "Clear scoring. Clear outcomes."],
-            ["Local Impact", "Built for South African realities."],
-            ["Speed", "Faster response, faster decisions."],
+            ["Human first", "Automation should feel useful, not robotic."],
+            ["Context matters", "A lead is only useful when the next action is clear."],
+            ["Less noise", "Fewer cold conversations. Better-timed handovers."],
+            ["Local reality", "Built around South African property workflows."],
+            ["Momentum", "Every flow should move the user closer to action."],
           ].map(([title, body]) => (
             <TechCard key={title}>
               <strong>{title}</strong>

@@ -11,8 +11,8 @@ export default function PricingPage() {
     <main className="tech-page">
       <TechHero
         eyebrow="Pricing"
-        title="Simple pricing. Two models."
-        subtitle="Agents pay monthly. Private sellers pay once-off per property. Final pricing is being confirmed during pilot validation."
+        title="Pricing for cleaner property leads."
+        subtitle="HeyMies pricing is being finalised during pilot validation. The model is simple: agents pay for lead intelligence, sellers pay for a guided listing flow."
         primary={{ href: "/signup/agent", label: "Join as an agent" }}
         secondary={{ href: "/contact", label: "Talk to us" }}
         graphic="pricing"
@@ -21,16 +21,16 @@ export default function PricingPage() {
       <TechSection title="Choose your model" tone="alt">
         <div className="grid gap-6 md:grid-cols-2">
           <PricingCard
-            title="For Agents"
-            subtitle="Monthly subscription"
-            price="RXXX"
-            suffix="/ month"
-            body="Ongoing access to qualified leads, prioritised actions, and workflow tools."
+        title="For Agents"
+            subtitle="Lead intelligence subscription"
+            price="Pilot"
+            suffix="monthly"
+            body="For teams that want fewer cold enquiries and more agent-ready buyer conversations."
             bullets={[
-              "Lead filtering and scoring",
-              "Smart follow-up workflows",
-              "Action dashboard and pipeline focus",
-              "Continuous updates",
+              "Buyer readiness and property fit scoring",
+              "Mia follow-ups before handover",
+              "Agent dashboard with summary and next action",
+              "New listing match alerts for active buyers",
             ]}
             primary={{ href: "/for-agents", label: "View for agents" }}
             secondary={{ href: "/signup/agent", label: "Join" }}
@@ -38,15 +38,15 @@ export default function PricingPage() {
 
           <PricingCard
             title="For Private Sellers"
-            subtitle="Once-off fee per property"
-            price="RXXX"
-            suffix="once-off"
-            body="Structured tools to reduce admin and move serious buyers toward offers."
+            subtitle="Guided listing flow"
+            price="Pilot"
+            suffix="per listing"
+            body="For sellers who want a draft listing, cleaner buyer interest, and less manual follow-up."
             bullets={[
-              "Guided listing setup",
+              "Signup details become a draft listing",
+              "Photo upload and publish workflow",
               "Buyer screening and intent signals",
-              "Viewing and follow-up structure",
-              "Optional handover to an agent",
+              "Optional agent handover later",
             ]}
             primary={{ href: "/for-private-sellers", label: "View sellers" }}
             secondary={{ href: "/signup/private-seller", label: "Join" }}
@@ -54,13 +54,13 @@ export default function PricingPage() {
         </div>
 
         <p className="mt-8 text-center text-xs text-slate-500">
-          Final pricing will be confirmed after pilot validation.
+          Final numbers will be confirmed after pilot validation. Early users help shape the package.
         </p>
       </TechSection>
 
       <TechCTA
-        title="Want early access pricing?"
-        body="Join the waitlist and we'll notify you as pricing goes live."
+        title="Want pilot access?"
+        body="Join with the role that fits you and we will keep pricing transparent as the pilot opens."
         href="/signup/agent"
         label="Join as an agent"
       />

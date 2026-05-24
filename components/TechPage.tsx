@@ -195,16 +195,57 @@ function PropertyGraphic() {
     <GraphicShell>
       <div className="rounded-2xl bg-[#07111f] p-5 text-white">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">
-          Listing signal
+          Property signal
         </p>
-        <div className="mt-5 rounded-2xl border border-white/10 bg-white/6 p-4">
-          <div className="aspect-[16/9] rounded-xl border border-emerald-300/20 bg-gradient-to-br from-emerald-300/25 via-sky-300/15 to-white/10" />
-          <div className="mt-4 flex items-center justify-between">
-            <div>
-              <p className="font-semibold">Qualified buyer match</p>
-              <p className="text-sm text-slate-400">Budget, area, timing aligned</p>
+
+        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/6">
+          <div className="grid h-36 grid-cols-[1.1fr_0.9fr]">
+            <div className="bg-gradient-to-br from-emerald-300 via-sky-300 to-slate-100 p-4 text-slate-950">
+              <div className="h-full rounded-xl border border-white/60 bg-white/55 p-3 shadow-sm">
+                <div className="h-3 w-20 rounded-full bg-slate-900/80" />
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="h-12 rounded-lg bg-white/70" />
+                  <div className="h-12 rounded-lg bg-white/45" />
+                </div>
+                <div className="mt-3 h-2 w-28 rounded-full bg-slate-900/50" />
+                <div className="mt-2 h-2 w-20 rounded-full bg-slate-900/25" />
+              </div>
             </div>
-            <span className="text-2xl font-semibold text-emerald-200">94%</span>
+
+            <div className="border-l border-white/10 p-4">
+              <p className="text-sm text-slate-300">Mia's read</p>
+              <p className="mt-1 text-3xl font-semibold text-emerald-200">92%</p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                Strong fit based on area, budget, and intent.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 border-t border-white/10 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold">3 Bedroom House in Sandton</p>
+                <p className="text-sm text-slate-400">Draft listing ready for photos</p>
+              </div>
+              <span className="rounded-full bg-amber-300/15 px-3 py-1 text-xs font-bold text-amber-100">
+                Draft
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="rounded-xl border border-white/10 bg-white/6 p-2">
+                <p className="text-slate-400">Beds</p>
+                <p className="mt-1 font-semibold">3</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/6 p-2">
+                <p className="text-slate-400">Budget</p>
+                <p className="mt-1 font-semibold">Fit</p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/6 p-2">
+                <p className="text-slate-400">Next</p>
+                <p className="mt-1 font-semibold">Publish</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -1,612 +1,107 @@
-"use client";
-
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { TechHero } from "@/components/TechPage";
+import { TechCard, TechFooter, TechHero, TechSection } from "@/components/TechPage";
+
+const agentSignals = [
+  ["Readiness score", "How close the buyer appears to action."],
+  ["Property fit", "How well the listing matches budget, area, and needs."],
+  ["Finance context", "Whether the buyer is pre-approved, cash-ready, or needs help."],
+  ["Mia's read", "A short summary and the suggested next action."],
+];
+
+const nurtureOutcomes = [
+  ["Agent-ready", "The buyer is handed over with contact details and context."],
+  ["Finance nurture", "Mia checks pre-approval before agent involvement."],
+  ["Needs confirmation", "Mia asks whether the buyer wants contact now."],
+  ["Better-fit nurture", "Mia keeps the buyer warm while watching for stronger matches."],
+];
 
 export default function ForAgentsPage() {
   return (
     <main className="tech-page">
-      <Hero />
-      <AgentDashboard />
-      <Pain />
-      <Value />
-      <HowItHelps />
-      <Comparison />
-      <FinalCTA />
-      <Footer />
+      <TechHero
+        eyebrow="For agents"
+        title="Spend less time chasing and more time with ready buyers."
+        subtitle="HeyMies qualifies enquiries before handover, so your dashboard shows buyer readiness, property fit, finance context, and Mia's recommended next action."
+        primary={{ href: "/signup/agent", label: "Join as agent" }}
+        secondary={{ href: "/how-it-works", label: "See the workflow" }}
+        graphic="score"
+      />
+
+      <TechSection title="The problem is not lead volume" tone="alt">
+        <div className="grid gap-5 md:grid-cols-3">
+          <Pain title="Cold enquiries" body="Buyers ask once, disappear, or were never ready for a call." />
+          <Pain title="Missing context" body="Agents often receive a name and number without finance, fit, or timing." />
+          <Pain title="Manual nurture" body="Follow-up happens when someone has time, which is usually too late." />
+        </div>
+      </TechSection>
+
+      <TechSection title="What the agent receives">
+        <div className="grid gap-5 md:grid-cols-4">
+          {agentSignals.map(([title, body]) => (
+            <TechCard key={title}>
+              <h2 className="text-lg font-semibold">{title}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-700">{body}</p>
+            </TechCard>
+          ))}
+        </div>
+      </TechSection>
+
+      <TechSection title="What Mia does before handover" tone="alt">
+        <div className="grid gap-5 md:grid-cols-4">
+          {nurtureOutcomes.map(([title, body]) => (
+            <TechCard key={title}>
+              <h2 className="text-lg font-semibold">{title}</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-700">{body}</p>
+            </TechCard>
+          ))}
+        </div>
+      </TechSection>
+
+      <TechSection title="Why this matters">
+        <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
+          <TechCard>
+            <p className="tech-kicker">Agent workflow</p>
+            <h2 className="mt-3 text-2xl font-semibold">Your first call starts warmer.</h2>
+            <p className="mt-4 leading-7 text-slate-700">
+              A HeyMies lead is not just an enquiry. It carries behaviour, match quality,
+              readiness, buyer response history, and the next best action. That means the
+              agent can call with purpose instead of opening with discovery from zero.
+            </p>
+          </TechCard>
+          <TechCard>
+            <h2 className="text-xl font-semibold">Best fit for agents who want</h2>
+            <ul className="mt-4 space-y-2 text-sm text-slate-700">
+              <li>Fewer but better conversations.</li>
+              <li>Clearer buyer intent before calling.</li>
+              <li>Automatic follow-up on uncertain buyers.</li>
+              <li>Visibility into which leads are becoming ready.</li>
+            </ul>
+          </TechCard>
+        </div>
+      </TechSection>
+
+      <section className="tech-hero px-4 py-16 text-white">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-3xl font-semibold">Work the leads worth working.</h2>
+            <p className="mt-3 text-slate-300">Join the agent pilot and help shape the handover standard.</p>
+          </div>
+          <Link href="/signup/agent" className="tech-button-primary rounded-xl px-6 py-3 text-sm font-semibold">
+            Join as agent
+          </Link>
+        </div>
+      </section>
+
+      <TechFooter />
     </main>
   );
 }
 
-/* ----------------------------- HERO ----------------------------- */
-
-function Hero() {
+function Pain({ title, body }: { title: string; body: string }) {
   return (
-    <TechHero
-      eyebrow="For agents"
-      title="Built for agents, not portals."
-      subtitle="HeyMies helps you stop chasing leads and start speaking to buyers who are actually ready."
-      primary={{ href: "/signup/agent", label: "Join HeyMies" }}
-      secondary={{ href: "/how-it-works", label: "See how it works" }}
-      graphic="score"
-    />
-  );
-}
-
-/* ----------------------------- DASHBOARD ----------------------------- */
-
-function AgentDashboard() {
-  type Listing = {
-    id: string;
-    title: string;
-    city: string;
-    suburb: string;
-    price: number;
-  };
-
-  type Lead = {
-    id: string;
-    name: string;
-    listingId?: string;
-    listingTitle?: string;
-    stage: "New" | "Nurturing" | "Ready" | "Closed";
-    lastContact: string;
-  };
-
-  const AGENT = {
-    name: "Gerhard",
-    agency: "HeyMies Partner Agent",
-    email: "agent@heymies.co.za",
-    phone: "+27 00 000 0000",
-    area: "Johannesburg • Sandton",
-  };
-
-  const LISTINGS: Listing[] = [
-    {
-      id: "l1",
-      title: "Modern 2-bed apartment",
-      city: "Johannesburg",
-      suburb: "Sandton",
-      price: 1899000,
-    },
-    {
-      id: "l2",
-      title: "1-bed investor unit",
-      city: "Johannesburg",
-      suburb: "Rosebank",
-      price: 1299000,
-    },
-    {
-      id: "l3",
-      title: "Family home with garden",
-      city: "Cape Town",
-      suburb: "Gardens",
-      price: 3495000,
-    },
-    {
-      id: "l4",
-      title: "Sea-facing apartment",
-      city: "Cape Town",
-      suburb: "Sea Point",
-      price: 5250000,
-    },
-    {
-      id: "l5",
-      title: "Lock-up-and-go townhouse",
-      city: "Durban",
-      suburb: "Umhlanga",
-      price: 2599000,
-    },
-    {
-      id: "l6",
-      title: "Starter apartment near transport",
-      city: "Pretoria",
-      suburb: "Hatfield",
-      price: 995000,
-    },
-  ];
-
-  const LEADS: Lead[] = [
-    {
-      id: "ld1",
-      name: "Thabo M.",
-      listingId: "l1",
-      listingTitle: "Modern 2-bed apartment",
-      stage: "New",
-      lastContact: "2026-02-06",
-    },
-    {
-      id: "ld2",
-      name: "Samantha K.",
-      listingId: "l5",
-      listingTitle: "Lock-up-and-go townhouse",
-      stage: "Nurturing",
-      lastContact: "2026-02-05",
-    },
-    {
-      id: "ld3",
-      name: "Ayesha R.",
-      listingId: "l3",
-      listingTitle: "Family home with garden",
-      stage: "Ready",
-      lastContact: "2026-02-07",
-    },
-    { id: "ld4", name: "Johan P.", stage: "Closed", lastContact: "2026-02-01" },
-  ];
-
-  const PRICE_BUCKETS = [
-    { key: "u1", label: "Under R1,000,000", min: 0, max: 999_999 },
-    { key: "1-2", label: "R1,000,000 – R2,000,000", min: 1_000_000, max: 2_000_000 },
-    { key: "2-5", label: "R2,000,000 – R5,000,000", min: 2_000_000, max: 5_000_000 },
-    { key: "5p", label: "R5,000,000+", min: 5_000_000, max: Number.POSITIVE_INFINITY },
-  ] as const;
-
-  const CITIES = ["Cape Town", "Johannesburg", "Pretoria", "Durban"] as const;
-
-  const SUBURBS_BY_CITY: Record<string, string[]> = {
-    "Cape Town": ["Sea Point", "Gardens"],
-    Johannesburg: ["Sandton", "Rosebank"],
-    Pretoria: ["Hatfield"],
-    Durban: ["Umhlanga"],
-  };
-
-  const [tab, setTab] = useState<"listings" | "leads">("listings");
-
-  const [city, setCity] = useState<string>("");
-  const [suburb, setSuburb] = useState<string>("");
-  const [priceKey, setPriceKey] = useState<string>("");
-  const [applied, setApplied] = useState(false);
-
-  const suburbs = city ? SUBURBS_BY_CITY[city] ?? [] : [];
-
-  const filteredListings = useMemo(() => {
-    let rows = [...LISTINGS];
-
-    if (city) rows = rows.filter((l) => l.city === city);
-    if (suburb) rows = rows.filter((l) => l.suburb === suburb);
-
-    if (priceKey) {
-      const bucket = PRICE_BUCKETS.find((b) => b.key === priceKey);
-      if (bucket) rows = rows.filter((l) => l.price >= bucket.min && l.price <= bucket.max);
-    }
-
-    return rows.sort((a, b) => a.price - b.price);
-  }, [city, suburb, priceKey]);
-
-  const filteredLeads = useMemo(() => [...LEADS], []);
-
-  const formatZAR = (n: number) =>
-    new Intl.NumberFormat("en-ZA", {
-      style: "currency",
-      currency: "ZAR",
-      maximumFractionDigits: 0,
-    }).format(n);
-
-  const kpi = useMemo(() => {
-    const totalListings = LISTINGS.length;
-    const totalLeads = LEADS.length;
-    const ready = LEADS.filter((l) => l.stage === "Ready").length;
-    const nurturing = LEADS.filter((l) => l.stage === "Nurturing").length;
-    return { totalListings, totalLeads, ready, nurturing };
-  }, []);
-
-  return (
-    <section className="bg-blue-50">
-      <div className="mx-auto max-w-6xl px-4 py-16">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold">Agent Dashboard</h2>
-            <p className="mt-2 text-slate-700">
-              Welcome back, <span className="font-semibold">{AGENT.name}</span>.
-            </p>
-            <div className="mt-3 text-sm text-slate-600">
-              {AGENT.agency} • {AGENT.area}
-            </div>
-            <div className="mt-1 text-sm text-slate-600">
-              {AGENT.email} • {AGENT.phone}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-white/70"
-              onClick={() => alert("Next: add listing flow")}
-            >
-              Add listing
-            </button>
-            <button
-              type="button"
-              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-              onClick={() => alert("Next: export/report")}
-            >
-              Export
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-3 md:grid-cols-4">
-          <Kpi label="Listings" value={kpi.totalListings} />
-          <Kpi label="Leads" value={kpi.totalLeads} />
-          <Kpi label="Ready" value={kpi.ready} />
-          <Kpi label="Nurturing" value={kpi.nurturing} />
-        </div>
-
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <TabButton active={tab === "listings"} onClick={() => setTab("listings")}>
-            Your Listings
-          </TabButton>
-          <TabButton active={tab === "leads"} onClick={() => setTab("leads")}>
-            Your Leads
-          </TabButton>
-        </div>
-
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
-          {tab === "listings" ? (
-            <>
-              <div className="grid gap-6 md:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700">
-                    City / Town
-                  </label>
-                  <select
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm"
-                    value={city}
-                    onChange={(e) => {
-                      setCity(e.target.value);
-                      setSuburb("");
-                      setApplied(false);
-                    }}
-                  >
-                    <option value="">Select city or town</option>
-                    {CITIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700">
-                    Suburb
-                  </label>
-                  <select
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm"
-                    value={suburb}
-                    onChange={(e) => {
-                      setSuburb(e.target.value);
-                      setApplied(false);
-                    }}
-                    disabled={!city}
-                  >
-                    <option value="">
-                      {city ? "Select suburb" : "Select city first"}
-                    </option>
-                    {suburbs.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700">
-                    Price range
-                  </label>
-                  <select
-                    className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm"
-                    value={priceKey}
-                    onChange={(e) => {
-                      setPriceKey(e.target.value);
-                      setApplied(false);
-                    }}
-                  >
-                    <option value="">Select price range</option>
-                    {PRICE_BUCKETS.map((b) => (
-                      <option key={b.key} value={b.key}>
-                        {b.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="mt-6 w-full rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                onClick={() => setApplied(true)}
-              >
-                Apply filters
-              </button>
-
-              {applied ? (
-                <div className="mt-8">
-                  <div className="flex items-end justify-between">
-                    <h3 className="text-lg font-semibold">Listings in selection</h3>
-                    <div className="text-sm text-slate-600">
-                      {filteredListings.length} listing(s)
-                    </div>
-                  </div>
-
-                  {filteredListings.length === 0 ? (
-                    <p className="mt-4 text-sm text-slate-600">
-                      No listings match that selection.
-                    </p>
-                  ) : (
-                    <ul className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200">
-                      {filteredListings.map((l) => (
-                        <li
-                          key={l.id}
-                          className="flex items-center justify-between gap-4 px-4 py-4"
-                        >
-                          <div className="min-w-0">
-                            <div className="truncate font-semibold">{l.title}</div>
-                            <div className="mt-1 text-sm text-slate-600">
-                              {l.suburb}, {l.city}
-                            </div>
-                          </div>
-                          <div className="shrink-0 text-sm font-semibold text-slate-900">
-                            {formatZAR(l.price)}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : (
-                <p className="mt-6 text-sm text-slate-600">
-                  Select City → Suburb → Price, then click{" "}
-                  <span className="font-semibold">Apply filters</span>.
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="flex items-end justify-between">
-                <h3 className="text-lg font-semibold">Your Leads</h3>
-                <div className="text-sm text-slate-600">
-                  {filteredLeads.length} lead(s)
-                </div>
-              </div>
-
-              <ul className="mt-4 divide-y divide-slate-200 rounded-xl border border-slate-200">
-                {filteredLeads.map((l) => (
-                  <li
-                    key={l.id}
-                    className="flex flex-col gap-1 px-4 py-4 md:flex-row md:items-center md:justify-between"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{l.name}</div>
-                      <div className="mt-1 text-sm text-slate-600">
-                        {l.listingTitle ? l.listingTitle : "No listing linked"} •
-                        Last contact: {l.lastContact}
-                      </div>
-                    </div>
-                    <span
-                      className={`mt-2 inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${stageClass(
-                        l.stage
-                      )}`}
-                    >
-                      {l.stage}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function stageClass(stage: string) {
-  if (stage === "Ready") return "bg-emerald-50 text-emerald-700";
-  if (stage === "Nurturing") return "bg-blue-50 text-blue-700";
-  if (stage === "Closed") return "bg-slate-100 text-slate-700";
-  return "bg-emerald-100 text-emerald-800";
-}
-
-function Kpi({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <div className="text-xs font-semibold text-slate-600">{label}</div>
-      <div className="mt-2 text-2xl font-semibold">{value}</div>
-    </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        active
-          ? "rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
-          : "rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold hover:bg-white/70"
-      }
-    >
-      {children}
-    </button>
-  );
-}
-
-/* ----------------------------- PAIN ----------------------------- */
-
-function Pain() {
-  return (
-    <section className="bg-slate-50">
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-2xl font-semibold">
-          The problem agents live with every day
-        </h2>
-
-        <ul className="mt-8 space-y-3 text-slate-700">
-          <li>• Paying for leads that never answer</li>
-          <li>• Competing with other agents on speed, not quality</li>
-          <li>• Spending hours qualifying buyers who aren’t ready</li>
-          <li>• Carrying all the risk</li>
-        </ul>
-
-        <p className="mt-6 font-semibold">
-          More leads don’t solve this. Better leads do.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-/* ----------------------------- VALUE ----------------------------- */
-
-function Value() {
-  return (
-    <section>
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-2xl font-semibold">What HeyMies does differently</h2>
-
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          <Card>
-            <strong>Qualification first</strong>
-            <p className="mt-2 text-sm text-slate-700">
-              Leads are scored based on behaviour, engagement, and intent — not
-              just a form fill.
-            </p>
-          </Card>
-
-          <Card>
-            <strong>Nurture without effort</strong>
-            <p className="mt-2 text-sm text-slate-700">
-              Automated follow-ups keep buyers warm until they’re ready to act.
-            </p>
-          </Card>
-
-          <Card>
-            <strong>Hand-off at the right time</strong>
-            <p className="mt-2 text-sm text-slate-700">
-              You only engage when there’s a real opportunity to close.
-            </p>
-          </Card>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ----------------------------- HOW IT HELPS ----------------------------- */
-
-function HowItHelps() {
-  return (
-    <section className="bg-emerald-50">
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-2xl font-semibold">What this means for you</h2>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <Benefit>Fewer calls, higher intent conversations</Benefit>
-          <Benefit>Less admin, more selling</Benefit>
-          <Benefit>Better use of your marketing spend</Benefit>
-          <Benefit>Control over when a lead is worth your time</Benefit>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ----------------------------- COMPARISON ----------------------------- */
-
-function Comparison() {
-  return (
-    <section>
-      <div className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-2xl font-semibold">Traditional portals vs HeyMies</h2>
-
-        <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <Card>
-            <strong>Traditional portals</strong>
-            <ul className="mt-3 space-y-2 text-sm text-slate-700">
-              <li>Pay for exposure</li>
-              <li>Compete on speed</li>
-              <li>Chase every enquiry</li>
-              <li>Unqualified buyers</li>
-            </ul>
-          </Card>
-
-          <Card>
-            <strong>HeyMies</strong>
-            <ul className="mt-3 space-y-2 text-sm text-slate-700">
-              <li>Pay for readiness</li>
-              <li>Compete on relevance</li>
-              <li>Speak when it matters</li>
-              <li>Buyers with intent</li>
-            </ul>
-          </Card>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ----------------------------- CTA ----------------------------- */
-
-function FinalCTA() {
-  return (
-    <section className="bg-slate-900 px-4 py-20 text-white">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="text-3xl font-semibold">Stop chasing. Start closing.</h2>
-        <p className="mt-3 text-slate-300">
-          Early access for agents who value their time.
-        </p>
-
-        <div className="mt-8">
-          <Link
-            href="/#join"
-            className="inline-block rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-100"
-          >
-            Join HeyMies
-          </Link>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ----------------------------- FOOTER ----------------------------- */
-
-function Footer() {
-  return (
-    <footer className="border-t px-4 py-10 text-sm text-slate-600">
-      <div className="mx-auto max-w-6xl">
-        © {new Date().getFullYear()} HeyMies
-      </div>
-    </footer>
-  );
-}
-
-/* ----------------------------- UI ----------------------------- */
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6">
-      {children}
-    </div>
-  );
-}
-
-function Benefit({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-xl border border-emerald-200 bg-white p-5 font-medium">
-      {children}
-    </div>
+    <TechCard>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className="mt-3 text-sm leading-6 text-slate-700">{body}</p>
+    </TechCard>
   );
 }
