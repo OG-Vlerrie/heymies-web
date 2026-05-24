@@ -6,6 +6,7 @@ import { supabaseBrowser } from "@/lib/supabase/browser";
 
 const LISTING_TYPES = ["house", "apartment", "townhouse", "duplex", "cluster", "land", "commercial"] as const;
 const SALE_TYPES = ["sale", "rent"] as const;
+const MAX_LISTING_IMAGES = 50;
 
 const FEATURE_OPTIONS = [
   "pool",
@@ -207,7 +208,7 @@ export default function NewListingPage() {
 
     const picked = Array.from(selected)
       .filter((f) => f.type.startsWith("image/"))
-      .slice(0, 12);
+      .slice(0, MAX_LISTING_IMAGES);
 
     setFiles(picked);
 
@@ -570,7 +571,7 @@ export default function NewListingPage() {
               className="block w-full text-sm text-slate-900"
             />
 
-            <p className="text-xs text-slate-600">Up to 12 images. First image becomes the cover.</p>
+            <p className="text-xs text-slate-600">Up to 50 images. First image becomes the cover.</p>
 
             {previews.length > 0 && (
               <div className="grid grid-cols-3 gap-3 md:grid-cols-4">

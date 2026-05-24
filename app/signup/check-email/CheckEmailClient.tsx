@@ -33,7 +33,8 @@ export default function CheckEmailClient() {
         </p>
 
         <p className="mt-3 text-sm text-slate-600">
-          Once you confirm your email, return here and log in to continue.
+          Once you confirm your email, return here and log in to continue. If
+          you do not see the email, please check your spam or junk folder.
         </p>
 
         <div className="mt-8 flex gap-3">

@@ -15,6 +15,7 @@ const LISTING_TYPES = [
 ] as const;
 
 const SALE_TYPES = ["sale", "rent"] as const;
+const MAX_LISTING_IMAGES = 50;
 
 const FEATURE_OPTIONS = [
   "pool",
@@ -312,7 +313,7 @@ export default function EditListingPage() {
 
     const picked = Array.from(selected).filter((f) => f.type.startsWith("image/"));
 
-    const allowed = Math.max(0, 12 - existingImages.length - newFiles.length);
+    const allowed = Math.max(0, MAX_LISTING_IMAGES - existingImages.length - newFiles.length);
     const toAdd = picked.slice(0, allowed);
     if (toAdd.length === 0) return;
 
@@ -604,7 +605,7 @@ export default function EditListingPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <p className="text-sm font-semibold text-slate-900">Add new images</p>
-              <p className="mt-1 text-xs text-slate-600">Max 12 total images (existing + new).</p>
+              <p className="mt-1 text-xs text-slate-600">Max 50 total images (existing + new).</p>
 
               <input
                 type="file"

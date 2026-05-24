@@ -100,7 +100,7 @@ export default function ListingsClient({
               <option value="1500000">R1 500 000</option>
               <option value="2500000">R2 500 000</option>
               <option value="3500000">R3 500 000</option>
-              <option value="5000000">R5 000 000</option>
+              <option value="500000000">R500 000 000</option>
             </select>
           </div>
 
