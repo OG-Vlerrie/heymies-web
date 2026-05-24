@@ -131,7 +131,7 @@ export default function PrivateSellerSignupPage() {
   }
 
   function confirmationRedirect() {
-    return `${window.location.origin}/login`;
+    return `${window.location.origin}/login?next=${encodeURIComponent("/dashboard/listings")}`;
   }
 
   function validateStep(s: number): string | null {
@@ -254,7 +254,9 @@ export default function PrivateSellerSignupPage() {
       if (signUpError) throw new Error(signUpError.message);
 
       router.push(
-        `/signup/check-email?role=seller&email=${encodeURIComponent(form.email.trim())}`
+        `/signup/check-email?role=seller&email=${encodeURIComponent(
+          form.email.trim()
+        )}&next=${encodeURIComponent("/dashboard/listings")}`
       );
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong.");

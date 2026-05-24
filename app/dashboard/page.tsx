@@ -29,8 +29,8 @@ export default function DashboardPage() {
     (async () => {
       setError(null);
 
-      const { data: userRes } = await supabase.auth.getUser();
-      const user = userRes.user;
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const user = sessionRes.session?.user;
 
       if (!user) {
         router.push("/login");
@@ -50,6 +50,22 @@ export default function DashboardPage() {
       }
 
       setProfile(data as Profile);
+
+      if (data.role === "seller" && sessionRes.session?.access_token) {
+        const draftRes = await fetch("/api/seller/draft-listing", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sessionRes.session.access_token}`,
+          },
+        });
+        const draftData = await draftRes.json().catch(() => ({}));
+
+        if (draftRes.ok && draftData?.created && draftData?.listingId) {
+          router.replace(`/dashboard/listings/${draftData.listingId}/edit?from=seller-signup`);
+          return;
+        }
+      }
+
       setLoading(false);
     })();
   }, [router, supabase]);

@@ -104,6 +104,7 @@ export default function EditListingPage() {
     useState<(typeof LISTING_TYPES)[number]>("house");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [listingStatus, setListingStatus] = useState("draft");
 
   // Price
   const [price, setPrice] = useState("");
@@ -241,6 +242,7 @@ export default function EditListingPage() {
 
       setTitle(row.title ?? "");
       setDescription(row.description ?? "");
+      setListingStatus(row.status ?? "draft");
 
       setPrice(String(sType === "rent" ? row.price_per_month ?? "" : row.price ?? ""));
       setDeposit(String(row.deposit ?? ""));
@@ -379,7 +381,7 @@ export default function EditListingPage() {
     return urls;
   }
 
-  async function onSave() {
+  async function onSave(nextStatus = listingStatus) {
     if (!listingId) return;
 
     setError(null);
@@ -409,6 +411,11 @@ export default function EditListingPage() {
           ? coverImage
           : mergedImages[0] ?? null;
 
+      if (nextStatus === "active" && mergedImages.length === 0) {
+        setSaving(false);
+        return setError("Add at least one photo before publishing this listing.");
+      }
+
       const salePrice = saleType === "sale" ? priceNum : null;
       const rentPerMonth = saleType === "rent" ? priceNum : null;
 
@@ -417,6 +424,7 @@ export default function EditListingPage() {
         .update({
           title: title.trim(),
           description: description.trim() || null,
+          status: nextStatus,
 
           sale_type: saleType,
           listing_type: listingType,
@@ -469,6 +477,17 @@ export default function EditListingPage() {
 
       setExistingImages(mergedImages);
       setCoverImage(finalCover);
+      setListingStatus(nextStatus);
+
+      if (nextStatus === "active") {
+        fetch("/api/matching/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ listingId, minScore: 55 }),
+        }).catch((matchError) => {
+          console.error("Failed to run buyer matching:", matchError);
+        });
+      }
 
       setSaving(false);
 
@@ -489,7 +508,11 @@ export default function EditListingPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Edit Listing</h1>
-            <p className="mt-1 text-sm text-slate-600">Update property details</p>
+            <p className="mt-1 text-sm text-slate-600">
+              {listingStatus === "draft"
+                ? "Review your draft, add photos, then publish when ready"
+                : "Update property details"}
+            </p>
           </div>
 
           <button
@@ -502,6 +525,12 @@ export default function EditListingPage() {
             Back
           </button>
         </div>
+
+        {listingStatus === "draft" ? (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            This listing is a draft and is not visible to buyers yet. Add photos and check the details before publishing.
+          </div>
+        ) : null}
 
         <div className="mt-6 grid gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           {/* Core */}
@@ -896,13 +925,25 @@ export default function EditListingPage() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <button
-            className="rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
-            onClick={onSave}
-            disabled={saving}
-          >
-            {saving ? "Saving…" : "Save changes"}
-          </button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:opacity-60"
+              onClick={() => onSave(listingStatus === "active" ? "active" : "draft")}
+              disabled={saving}
+            >
+              {saving ? "Saving..." : listingStatus === "active" ? "Save changes" : "Save draft"}
+            </button>
+
+            {listingStatus !== "active" ? (
+              <button
+                className="rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-60"
+                onClick={() => onSave("active")}
+                disabled={saving}
+              >
+                {saving ? "Publishing..." : "Publish listing"}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </main>

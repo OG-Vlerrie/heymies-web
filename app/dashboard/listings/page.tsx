@@ -16,6 +16,10 @@ type Listing = {
   cover_image: string | null;
 };
 
+type Profile = {
+  role: string;
+};
+
 export default function ListingsPage() {
   const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
@@ -26,16 +30,36 @@ export default function ListingsPage() {
 
   useEffect(() => {
     (async () => {
-      const { data: userRes } = await supabase.auth.getUser();
-      if (!userRes.user) return router.push("/login");
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const user = sessionRes.session?.user;
+      if (!user) return router.push("/login");
 
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", userRes.user.id).single();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single<Profile>();
       if (profile?.role === "buyer") return router.push("/dashboard");
+
+      if (profile?.role === "seller" && sessionRes.session?.access_token) {
+        const draftRes = await fetch("/api/seller/draft-listing", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sessionRes.session.access_token}`,
+          },
+        });
+        const draftData = await draftRes.json().catch(() => ({}));
+
+        if (draftRes.ok && draftData?.created && draftData?.listingId) {
+          router.replace(`/dashboard/listings/${draftData.listingId}/edit?from=seller-signup`);
+          return;
+        }
+      }
 
       const { data, error: lErr } = await supabase
   .from("listings")
   .select("id, title, price, suburb, city, status, created_at, cover_image")
-  .eq("agent_id", userRes.user.id)
+  .eq("agent_id", user.id)
   .neq("status", "inactive")
   .order("created_at", { ascending: false })
   .limit(200);
@@ -73,7 +97,7 @@ export default function ListingsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Listings</h1>
-          <p className="mt-1 text-sm text-slate-600">Your active listings</p>
+          <p className="mt-1 text-sm text-slate-600">Your listings and drafts</p>
         </div>
 
         <div className="flex gap-2">
