@@ -21,7 +21,7 @@ export default function LoginClient() {
     setError(null);
     setLoading(true);
 
-    const { error: authErr } = await supabase.auth.signInWithPassword({
+    const { data: loginData, error: authErr } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -30,6 +30,15 @@ export default function LoginClient() {
       setLoading(false);
       setError(authErr.message);
       return;
+    }
+
+    if (loginData.session?.access_token) {
+      await fetch("/api/auth/admin-session", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${loginData.session.access_token}`,
+        },
+      }).catch(() => null);
     }
 
     setLoading(false);

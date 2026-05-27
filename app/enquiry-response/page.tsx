@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const ACTION_COPY: Record<string, string> = {
   finance_ready:
-    "Thanks. I have marked your finance position as stronger for this enquiry.",
+    "Thanks. I have marked your finance, deposit, or cash position as stronger for this enquiry.",
   needs_preapproval:
     "Thanks. I have noted that pre-approval help may be useful before agent handover.",
   wants_viewing:

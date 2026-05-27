@@ -325,7 +325,7 @@ export default async function AdminEnquiryDetailPage({ params }: { params: { id:
                 <Detail label="Areas" value={formatList(buyer?.areas_multi ?? buyer?.areas)} />
                 <Detail label="Types" value={formatList(buyer?.property_types)} />
                 <Detail label="Beds / baths" value={`${buyer?.bedrooms_min ?? "-"} / ${buyer?.bathrooms_min ?? "-"}`} />
-                <Detail label="Bond status" value={buyer?.preapproved ?? "-"} />
+                <Detail label="Finance status" value={buyer?.preapproved ?? "-"} />
                 <Detail label="Timeline" value={buyer?.timeline ?? "-"} />
                 <Detail label="Selling first" value={buyer?.selling_property ?? "-"} />
               </div>

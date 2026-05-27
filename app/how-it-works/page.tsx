@@ -8,7 +8,7 @@ const stages = [
   ["Enquire", "A buyer can only enquire once they are registered, so Mia already has useful data."],
   ["Qualify", "Readiness, finance, property fit, and viewing intent decide the next step."],
   ["Nurture", "Mia follows up automatically until the buyer is clearer, warmer, or ready."],
-  ["Handover", "Agents receive the lead with a summary, score, and recommended action."],
+  ["Handover", "Agents receive the lead with a summary, readiness context, and recommended action."],
 ];
 
 export default function HowItWorksPage() {
@@ -17,7 +17,7 @@ export default function HowItWorksPage() {
       <TechHero
         eyebrow="How it works"
         title="The HeyMies engine follows up until the timing is right."
-        subtitle="HeyMies captures real context, scores fit and readiness, lets Mia nurture uncertain buyers, and hands over cleaner opportunities."
+        subtitle="HeyMies captures real context, checks fit and readiness, lets Mia nurture uncertain buyers, and hands over cleaner opportunities."
         primary={{ href: "/signup", label: "Start now" }}
         secondary={{ href: "/listings", label: "Browse listings" }}
         graphic="pipeline"

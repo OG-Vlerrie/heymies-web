@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { financeReadinessScore, hasFinanceGap } from "@/lib/buyer-finance";
 import { scoreListingForBuyer, type BuyerMatchProfile, type MatchListing } from "@/lib/matching";
 import { ensureEmailPreference } from "@/lib/email-preferences";
 
@@ -25,7 +26,7 @@ type BuyerProfile = BuyerMatchProfile & {
 };
 
 const BUYER_RESPONSE_ACTIONS = {
-  finance_ready: "I'm pre-approved or paying cash",
+  finance_ready: "I'm pre-approved, deposit-ready, or paying cash",
   needs_preapproval: "I'd like help with pre-approval",
   wants_viewing: "I'd like to arrange a viewing",
   still_comparing: "I'm still comparing options",
@@ -623,9 +624,8 @@ function qualifyEnquiry({
     readinessScore += Math.round(propertyFitScore * 0.35);
   }
 
-  if (preapproved === "yes" || preapproved.includes("cash")) readinessScore += 25;
-  else if (preapproved.includes("progress")) readinessScore += 15;
-  else if (preapproved === "no" || preapproved.includes("not")) readinessScore -= 5;
+  readinessScore += Math.round(financeReadinessScore(preapproved) * 0.85);
+  if (hasFinanceGap(preapproved)) readinessScore -= 5;
 
   if (timeline.includes("0-3") || timeline.includes("asap")) readinessScore += 20;
   else if (timeline.includes("3-6")) readinessScore += 12;
@@ -638,8 +638,7 @@ function qualifyEnquiry({
 
   readinessScore = Math.max(0, Math.min(100, readinessScore));
 
-  const hasFinanceGap =
-    !preapproved || preapproved === "no" || preapproved.includes("not");
+  const needsFinanceFollowup = hasFinanceGap(preapproved);
   const isSlowTimeline = timeline.includes("browsing") || timeline.includes("6-12");
 
   let status: QualificationStatus = "needs_confirmation";
@@ -648,7 +647,7 @@ function qualifyEnquiry({
     status = "nurture_for_better_fit";
   } else if (readinessScore >= 70 && (propertyFitScore ?? 0) >= 70) {
     status = "agent_ready";
-  } else if (hasFinanceGap && (propertyFitScore ?? 0) >= 50) {
+  } else if (needsFinanceFollowup && (propertyFitScore ?? 0) >= 50) {
     status = "needs_finance_nurture";
   } else if (isSlowTimeline && readinessScore < 55) {
     status = "not_ready";
@@ -704,7 +703,7 @@ function qualificationCopy(status: QualificationStatus, listingTitle: string) {
       };
     case "needs_finance_nurture":
       return {
-        nextAction: "Are you already pre-approved, paying cash, or would you like help getting pre-approved?",
+        nextAction: "Are you already pre-approved, deposit-ready, paying cash, or would you like help getting pre-approved?",
         buyerHeading: "This could be a good fit, but let's check finance first",
         buyerBody: `Thanks for your interest in ${listingTitle}. It looks like it could fit your search, but before I send it through as a serious lead, I want to check your finance position.\n\nAgents usually move faster when they know a buyer is pre-approved or has a clear finance plan.`,
       };

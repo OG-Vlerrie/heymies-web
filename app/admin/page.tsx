@@ -177,6 +177,12 @@ export default async function AdminPage() {
                 System Health
               </Link>
               <Link
+                href="/admin/launch"
+                className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
+              >
+                Launch Readiness
+              </Link>
+              <Link
                 href="/admin/qa"
                 className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
               >
@@ -229,6 +235,12 @@ export default async function AdminPage() {
             body="Review weekly performance, admin audit activity, lead outcomes, and export CSV reports."
             href="/admin/reports"
             stat="Metrics"
+          />
+          <AdminCard
+            title="Launch readiness"
+            body="Check whether HeyMies is alpha-ready, beta-ready, or blocked by config, data, email, or listing quality."
+            href="/admin/launch"
+            stat="Go/no-go"
           />
           <AdminCard
             title="QA checklist"

@@ -50,7 +50,7 @@ type DueEnquiry = {
 };
 
 const BUYER_RESPONSE_ACTIONS: Record<BuyerResponseAction, string> = {
-  finance_ready: "I'm pre-approved or paying cash",
+  finance_ready: "I'm pre-approved, deposit-ready, or paying cash",
   needs_preapproval: "I'd like help with pre-approval",
   wants_viewing: "I'd like to arrange a viewing",
   still_comparing: "I'm still comparing options",
@@ -371,7 +371,7 @@ function copyForStatus(status: QualificationStatus, listingTitle: string) {
       return {
         subject: `Quick finance check for ${listingTitle}`,
         heading: "Should I help with the finance step?",
-        body: `You showed interest in ${listingTitle}. Before I hand you over as a ready buyer, I want to understand whether finance is sorted or whether pre-approval would help.`,
+        body: `You showed interest in ${listingTitle}. Before I hand you over as a ready buyer, I want to understand whether finance is sorted, whether you have a deposit or cash ready, or whether pre-approval would help.`,
         nextAction: "Pick the closest answer below and I will update your enquiry.",
         responseActions: ["finance_ready", "needs_preapproval", "still_comparing"] as BuyerResponseAction[],
       };

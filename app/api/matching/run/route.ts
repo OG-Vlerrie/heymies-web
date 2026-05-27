@@ -3,6 +3,7 @@ import { scoreListingForBuyer, type BuyerMatchProfile, type MatchListing } from 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
 import { ensureEmailPreference } from "@/lib/email-preferences";
+import { buyerMatchLabel } from "@/lib/match-labels";
 
 type BuyerAlert = {
   id: string;
@@ -243,7 +244,7 @@ async function sendMatchEmail({
     const response = await resend.emails.send({
       from: process.env.EMAIL_FROM?.trim() || "Mia from HeyMies <mia@heymies.co.za>",
       to,
-      subject: `Mia found a ${score}% match: ${listing.title}`,
+      subject: `Mia found a ${buyerMatchLabel(score).toLowerCase()}: ${listing.title}`,
       html: `
         <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
           <p>Hi ${escapeHtml(firstName)},</p>
@@ -252,7 +253,7 @@ async function sendMatchEmail({
             <h2 style="margin: 0 0 8px;">${escapeHtml(listing.title)}</h2>
             <p style="margin: 4px 0;"><strong>${escapeHtml(priceText)}</strong>${listing.sale_type === "rent" ? " / month" : ""}</p>
             <p style="margin: 4px 0;">${escapeHtml(location || "Location not listed")}</p>
-            <p style="margin: 4px 0;">Match score: <strong>${score}%</strong></p>
+            <p style="margin: 4px 0;">Mia's view: <strong>${escapeHtml(buyerMatchLabel(score))}</strong></p>
             ${
               reasons.length
                 ? `<p style="margin: 4px 0;">Why it matched: ${escapeHtml(reasons.join(", "))}</p>`

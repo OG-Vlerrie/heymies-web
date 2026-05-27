@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import CompareListingButton from "@/components/listings/CompareListingButton";
 import SaveListingButton from "@/components/listings/SaveListingButton";
+import { isStrongFinanceStatus } from "@/lib/buyer-finance";
 import {
   scoreListingForBuyer,
   type ListingMatch,
   type MatchListing,
 } from "@/lib/matching";
+import { buyerMatchLabel, buyerProfileStrengthLabel } from "@/lib/match-labels";
 
 /* ----------------------------- Types ----------------------------- */
 
@@ -401,9 +403,9 @@ export default function BuyerDashboardPage() {
       return diff >= 0 && diff <= 7 * 24 * 60 * 60 * 1000;
     }).length;
 
-    const matchScore = buyer?.lead_score ?? null;
+    const profileStatus = buyerProfileStrengthLabel(buyer?.lead_score);
 
-    return { savedCount, enquiryCount, viewingsThisWeek, matchScore };
+    return { savedCount, enquiryCount, viewingsThisWeek, profileStatus };
   }, [saved, enquiries, viewings, buyer]);
 
   return (
@@ -485,7 +487,7 @@ export default function BuyerDashboardPage() {
                       {fmtMaybeMoney(buyer?.budget_max ?? null)}
                     </span>
                     {" · "}
-                    Pre-approval:{" "}
+                    Finance:{" "}
                     <span className="font-medium text-slate-800">
                       {buyer?.preapproved ?? "—"}
                     </span>
@@ -523,28 +525,21 @@ export default function BuyerDashboardPage() {
                   <div className="flex items-center justify-between gap-6">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                        Match score
+                        Profile status
                       </p>
                       <p className="mt-1 text-2xl font-semibold">
-                        {buyer?.lead_score ?? 0}
-                        <span className="text-sm text-slate-500">/100</span>
+                        {buyerProfileStrengthLabel(buyer?.lead_score)}
                       </p>
                     </div>
 
                     <div className="w-36">
-                      <div className="h-2 w-full rounded-full bg-slate-200">
-                        <div
-                          className="h-2 rounded-full bg-emerald-600"
-                          style={{ width: `${buyer?.lead_score ?? 0}%` }}
-                        />
-                      </div>
                       <p className="mt-2 text-xs text-slate-600">
-                        Higher = faster matching
+                        Complete finance, timing, and areas to help Mia guide better next steps.
                       </p>
                     </div>
                   </div>
 
-                  {buyer?.preapproved !== "Yes" && (
+                  {!isStrongFinanceStatus(buyer?.preapproved) && (
                     <a
                       className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
                       href="https://www.ooba.co.za/home-loans/pre-approval/"
@@ -562,7 +557,7 @@ export default function BuyerDashboardPage() {
               <StatCard title="Saved homes" value={stats.savedCount.toString()} />
               <StatCard title="Active enquiries" value={stats.enquiryCount.toString()} />
               <StatCard title="Viewings this week" value={stats.viewingsThisWeek.toString()} />
-              <StatCard title="Lead score" value={(stats.matchScore ?? 0).toString()} />
+              <StatCard title="Profile" value={stats.profileStatus} />
             </div>
 
             <div className="mt-6 grid gap-6 md:grid-cols-3">
@@ -910,7 +905,7 @@ function RecommendationCard({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
-              {listing.match.score}% match
+              {buyerMatchLabel(listing.match.score)}
             </span>
             {listing.sale_type === "rent" ? (
               <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
@@ -988,7 +983,7 @@ function ProgressTracker({
     { label: "Set preferences (areas)", done: hasAreas },
     { label: "Shortlist homes", done: hasSaved },
     { label: "Start enquiries", done: hasEnquiries },
-    { label: "Pre-approved", done: preapproved === "Yes" },
+    { label: "Finance ready", done: isStrongFinanceStatus(preapproved) },
   ];
 
   const doneCount = steps.filter((s) => s.done).length;

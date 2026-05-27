@@ -178,11 +178,11 @@ export default function ListingsClient({
           </h3>
           <p className="mt-2 max-w-xl text-sm text-slate-600">
             {listings.length === 0
-              ? "Once listings are published, buyers will see match scores, save homes, compare shortlists, and enquire from here."
+              ? "Once listings are published, buyers will see match guidance, save homes, compare shortlists, and enquire from here."
               : "Try widening the area, budget, or bedroom filters."}
           </p>
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <DemoMetric label="Match scoring" value="Ready" />
+            <DemoMetric label="Match guidance" value="Ready" />
             <DemoMetric label="Saved homes" value="Enabled" />
             <DemoMetric label="Compare view" value="Up to 4" />
           </div>
@@ -248,7 +248,7 @@ function ListingCard({ listing }: { listing: PublicListing }) {
           </div>
 
           <div className="mt-4 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-            Log in to see match score
+            Log in for match guidance
           </div>
 
           <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { TechCard, TechFooter, TechHero, TechSection } from "@/components/TechPage";
 
 const benefits = [
-  ["Better matches", "HeyMies scores active listings against your budget, areas, property type, bedrooms, and bathrooms."],
+  ["Better matches", "HeyMies checks active listings against your budget, areas, property type, bedrooms, and bathrooms."],
   ["Less pressure", "Mia checks whether you want agent contact now or whether you are still comparing."],
   ["Useful alerts", "Saved alerts can notify you when a new listing looks like a strong fit."],
   ["Your own workspace", "Save homes, compare up to four listings, track enquiries, and keep your profile current."],
@@ -21,7 +21,7 @@ export default function ForBuyersPage() {
       <TechHero
         eyebrow="For buyers"
         title="Find better-matched homes without being pushed too soon."
-        subtitle="HeyMies uses your buyer profile to score listings, send useful alerts, and let Mia guide the next step before an agent gets involved."
+        subtitle="HeyMies uses your buyer profile to guide listing matches, send useful alerts, and let Mia shape the next step before an agent gets involved."
         primary={{ href: "/signup/buyer", label: "Create buyer profile" }}
         secondary={{ href: "/listings", label: "Browse listings" }}
         graphic="property"

@@ -85,8 +85,19 @@ export function TechCard({ children }: { children: React.ReactNode }) {
 export function TechFooter() {
   return (
     <footer className="border-t border-slate-200/80 bg-white/70 px-4 py-10 text-sm text-slate-600">
-      <div className="mx-auto max-w-6xl">
-        © {new Date().getFullYear()} HeyMies
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p>&copy; {new Date().getFullYear()} HeyMies</p>
+        <div className="flex flex-wrap gap-4">
+          <Link href="/privacy" className="font-medium hover:text-emerald-700">
+            Privacy
+          </Link>
+          <Link href="/terms" className="font-medium hover:text-emerald-700">
+            Terms
+          </Link>
+          <Link href="/email-preferences" className="font-medium hover:text-emerald-700">
+            Email preferences
+          </Link>
+        </div>
       </div>
     </footer>
   );
@@ -261,7 +272,7 @@ function PricingGraphic() {
           <div key={label} className="rounded-2xl border border-white/10 bg-white/6 p-4">
             <p className="text-sm text-slate-300">{label}</p>
             <div className="mt-3 flex items-end gap-2">
-              <span className="text-3xl font-semibold">RXXX</span>
+              <span className="text-3xl font-semibold">Pilot</span>
               <span className="pb-1 text-sm text-slate-400">{index === 0 ? "/ month" : "once-off"}</span>
             </div>
           </div>

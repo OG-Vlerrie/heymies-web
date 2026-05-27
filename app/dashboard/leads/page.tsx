@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { isStrongFinanceStatus } from "@/lib/buyer-finance";
 import { scoreListingForBuyer, type BuyerMatchProfile } from "@/lib/matching";
 
 type Role = "agent" | "seller" | "buyer" | "admin";
@@ -353,8 +354,8 @@ export default function DashboardLeadsPage() {
                           />
                           {buyer?.preapproved ? (
                             <QualityPill
-                              label={`Bond: ${buyer.preapproved}`}
-                              tone={buyer.preapproved === "Yes" ? "good" : "neutral"}
+                              label={`Finance: ${buyer.preapproved}`}
+                              tone={isStrongFinanceStatus(buyer.preapproved) ? "good" : "neutral"}
                             />
                           ) : null}
                           {buyer?.timeline ? (

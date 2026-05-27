@@ -77,6 +77,7 @@ export default function Header() {
   }, []);
 
   async function logout() {
+    await fetch("/api/auth/admin-session", { method: "DELETE" }).catch(() => null);
     await supabase.auth.signOut();
     router.push("/");
   }

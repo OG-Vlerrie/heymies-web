@@ -275,7 +275,7 @@ export default function LeadDetailPage() {
                 <div className="mt-4 space-y-3">
                   <Metric label="Readiness score" value={`${enquiry.readiness_score ?? buyer?.lead_score ?? 0}/100`} />
                   <Metric label="Property fit" value={fit ? `${fit.score}%` : "Pending"} />
-                  <Metric label="Bond status" value={buyer?.preapproved ?? "-"} />
+                  <Metric label="Finance status" value={buyer?.preapproved ?? "-"} />
                   <Metric label="Timeline" value={buyer?.timeline ?? "-"} />
                   <Metric label="Needs to sell first" value={buyer?.selling_property ?? "-"} />
                 </div>

@@ -30,9 +30,6 @@ type Payload = {
 
 export async function POST(req: Request) {
   try {
-    console.log("AI route called.");
-    console.log("OPENAI_API_KEY exists:", Boolean(process.env.OPENAI_API_KEY));
-
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { error: "Missing OPENAI_API_KEY in environment" },
@@ -50,7 +47,7 @@ export async function POST(req: Request) {
 Write a clean, professional South African property listing description.
 
 Rules:
-- 120–170 words
+- 120-170 words
 - No emojis
 - No ALL CAPS
 - No hype language

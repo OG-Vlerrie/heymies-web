@@ -5,6 +5,7 @@ import {
   TechHero,
   TechSection,
 } from "@/components/TechPage";
+import ContactForm from "./ContactForm";
 
 export default function ContactPage() {
   return (
@@ -21,29 +22,7 @@ export default function ContactPage() {
       <TechSection title="Get in touch" tone="alt">
         <div className="grid gap-8 lg:grid-cols-[1fr_0.85fr]">
           <TechCard>
-            <form className="grid gap-4">
-              <input
-                type="text"
-                placeholder="Full name"
-                className="tech-input w-full rounded-xl px-4 py-3 text-sm"
-              />
-              <input
-                type="email"
-                placeholder="Email address"
-                className="tech-input w-full rounded-xl px-4 py-3 text-sm"
-              />
-              <textarea
-                placeholder="Your message"
-                rows={5}
-                className="tech-input w-full rounded-xl px-4 py-3 text-sm"
-              />
-              <button
-                type="submit"
-                className="tech-button-primary mt-2 rounded-xl px-6 py-3 text-sm font-semibold"
-              >
-                Send message
-              </button>
-            </form>
+            <ContactForm />
           </TechCard>
 
           <div className="grid gap-4">

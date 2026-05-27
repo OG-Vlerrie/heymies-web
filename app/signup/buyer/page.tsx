@@ -3,6 +3,8 @@
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { BUYER_FINANCE_OPTIONS, financeReadinessScore, isStrongFinanceStatus } from "@/lib/buyer-finance";
+import { buyerProfileStrengthLabel } from "@/lib/match-labels";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,8 +129,7 @@ function BuyerSignupClient() {
 
     if (min !== null || max !== null) score += 10;
 
-    if (form.preapproved === "Yes") score += 30;
-    if (form.preapproved === "In Progress") score += 15;
+    score += financeReadinessScore(form.preapproved);
 
     if (form.timeline === "0-3 months") score += 25;
     else if (form.timeline === "3-6 months") score += 15;
@@ -188,7 +189,7 @@ function BuyerSignupClient() {
 
     if (currentStep === 2) {
       if (!form.preapproved) {
-        return "Please select your bond status.";
+        return "Please select your finance status.";
       }
 
       if (!form.timeline) {
@@ -558,29 +559,33 @@ function BuyerSignupClient() {
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Qualification</h2>
 
-              <Field label="Bond / pre-approval status">
+              <Field label="Finance / deposit status">
                 <select
                   className="w-full rounded-xl border border-slate-200 px-4 py-3"
                   value={form.preapproved}
                   onChange={(e) => setField("preapproved", e.target.value)}
                 >
                   <option value="">Select…</option>
-                  <option value="Yes">Pre-approved</option>
-                  <option value="In Progress">In progress</option>
-                  <option value="No">Not pre-approved</option>
+                  {BUYER_FINANCE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
 
-                <div className="mt-2 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm">
-                  <span className="text-slate-700">Need pre-approval?</span>
-                  <a
-                    href={PREAPPROVAL_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white"
-                  >
-                    Do pre-approval
-                  </a>
-                </div>
+                {!isStrongFinanceStatus(form.preapproved) && (
+                  <div className="mt-2 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm">
+                    <span className="text-slate-700">Need pre-approval?</span>
+                    <a
+                      href={PREAPPROVAL_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white"
+                    >
+                      Do pre-approval
+                    </a>
+                  </div>
+                )}
               </Field>
 
               <Field label="Buying timeline">
@@ -625,11 +630,11 @@ function BuyerSignupClient() {
 
               <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
                 <div className="flex items-center justify-between">
-                  <span>Estimated lead score</span>
-                  <span className="font-semibold">{computeLeadScore()}/100</span>
+                  <span>Profile strength</span>
+                  <span className="font-semibold">{buyerProfileStrengthLabel(computeLeadScore())}</span>
                 </div>
                 <p className="mt-2 text-slate-600">
-                  This helps prioritize serious buyers for faster matching.
+                  This helps Mia understand your search without turning your profile into a scorecard.
                 </p>
               </div>
             </div>

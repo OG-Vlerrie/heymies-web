@@ -3,6 +3,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { BUYER_FINANCE_OPTIONS, financeReadinessScore, isStrongFinanceStatus } from "@/lib/buyer-finance";
+import { buyerProfileStrengthLabel } from "@/lib/match-labels";
 
 const PROPERTY_TYPE_OPTIONS = ["House", "Apartment", "Townhouse", "Land"];
 const AREA_SUGGESTIONS = [
@@ -110,8 +112,7 @@ export default function BuyerProfilePage() {
     const max = parseOptionalNumber(form.budget_max);
     if (min !== null || max !== null) score += 10;
 
-    if (form.preapproved === "Yes") score += 30;
-    if (form.preapproved === "In Progress") score += 15;
+    score += financeReadinessScore(form.preapproved);
 
     if (form.timeline === "0-3 months") score += 25;
     else if (form.timeline === "3-6 months") score += 15;
@@ -409,19 +410,21 @@ export default function BuyerProfilePage() {
               </Field>
             </div>
 
-            <Field label="Bond / pre-approval status">
+            <Field label="Finance / deposit status">
               <select
                 className="w-full rounded-xl border border-slate-200 px-4 py-3"
                 value={form.preapproved}
                 onChange={(e) => setField("preapproved", e.target.value)}
               >
                 <option value="">Select…</option>
-                <option value="Yes">Pre-approved</option>
-                <option value="In Progress">In progress</option>
-                <option value="No">Not pre-approved</option>
+                {BUYER_FINANCE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
 
-              {form.preapproved !== "Yes" && (
+              {!isStrongFinanceStatus(form.preapproved) && (
                 <a
                   className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:opacity-95"
                   href="https://www.ooba.co.za/home-loans/pre-approval/"
@@ -476,10 +479,12 @@ export default function BuyerProfilePage() {
 
             <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
               <div className="flex items-center justify-between">
-                <span>Estimated lead score</span>
-                <span className="font-semibold">{computeLeadScore()}/100</span>
+                <span>Profile strength</span>
+                <span className="font-semibold">{buyerProfileStrengthLabel(computeLeadScore())}</span>
               </div>
-              <p className="mt-2 text-slate-600">Higher score = faster matching.</p>
+              <p className="mt-2 text-slate-600">
+                These details help Mia recommend better next steps without exposing internal scoring.
+              </p>
             </div>
 
             <button

@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HeyMies Web
 
-## Getting Started
+HeyMies is a Next.js real estate lead-intelligence app. Mia qualifies buyer enquiries, nurtures buyers when more context is needed, matches buyers to listings, and helps agents or private sellers receive cleaner handovers.
 
-First, run the development server:
+## Stack
+
+- Next.js 14
+- React 18
+- TypeScript
+- Supabase
+- Resend
+- OpenAI
+
+## Local Setup
+
+1. Copy `.env.example` to `.env.local`.
+2. Fill in Supabase, Resend, OpenAI, admin, and job secrets.
+3. Install dependencies with `npm install`.
+4. Run the app with `npm run dev`.
+5. Open `http://localhost:3000`.
+
+## Useful Commands
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+On Windows PowerShell, if `npm run build` is blocked by script execution policy, use:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm.cmd run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Core Flows
 
-## Learn More
+- Public listing search and listing detail pages.
+- Buyer, private seller, and agent signup.
+- Buyer dashboard with saved listings, comparison, alerts, and profile management.
+- Agent/seller dashboard with listing and lead workflows.
+- Mia enquiry qualification and nurture emails.
+- Buyer matching and match alert emails.
+- Admin control room for users, listings, enquiries, Mia, reports, QA, and health checks.
+- Launch readiness dashboard at `/admin/launch`.
 
-To learn more about Next.js, take a look at the following resources:
+## Admin Security
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Admin routes accept a signed admin session cookie for users whose `profiles.role` is `admin`.
+During alpha, Basic Auth can remain as a fallback. Before public beta:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Create or update your admin user's `public.profiles.role` to `admin`.
+2. Set `ADMIN_SESSION_SECRET` to a long random value.
+3. Set `ADMIN_REQUIRE_ROLE=true`.
+4. Keep `ADMIN_USER` and `ADMIN_PASS` strong until the Basic Auth fallback is removed.
 
-## Deploy on Vercel
+## Alpha Readiness
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Use `ALPHA_TEST_PLAN.md` before inviting friendly testers.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Before public testing, rotate any secrets that have been shared outside the deployment environment and confirm production Supabase migrations, email sending, and cron secrets are configured.
+
+Use `/admin/launch` as the live-user go/no-go screen before expanding beyond friendly alpha users.

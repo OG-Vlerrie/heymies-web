@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-const ALLOWED_ROLES = new Set(["buyer", "agent", "seller"]);
+const ALLOWED_ROLES = new Set(["buyer", "agent", "seller", "admin"]);
 
 export async function PATCH(req: Request) {
   try {

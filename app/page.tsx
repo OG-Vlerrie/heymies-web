@@ -29,7 +29,7 @@ const audiences = [
 
 const flow = [
   ["Profile", "HeyMies captures the buyer or seller context upfront."],
-  ["Match", "Listings are scored against buyer preferences and budget."],
+  ["Match", "Listings are checked against buyer preferences and budget."],
   ["Qualify", "Enquiries are checked for readiness, finance, and fit."],
   ["Nurture", "Mia follows up with human-style one-click questions."],
   ["Handover", "Agents receive the buyer when the signal is strong."],

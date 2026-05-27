@@ -7,6 +7,7 @@ import CompareListingButton from "@/components/listings/CompareListingButton";
 import SaveListingButton from "@/components/listings/SaveListingButton";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { scoreListingForBuyer, type BuyerMatchProfile } from "@/lib/matching";
+import { buyerMatchLabel } from "@/lib/match-labels";
 
 type Buyer = BuyerMatchProfile & {
   id: string;
@@ -139,7 +140,7 @@ export default function BuyerSavedPage() {
             <p className="tech-kicker">Buyer workspace</p>
             <h1 className="mt-3 text-3xl font-semibold">Saved listings</h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              Your shortlist with live match scores, quick enquiry links, and one-click removal.
+              Your shortlist with match guidance, quick enquiry links, and one-click removal.
             </p>
           </div>
 
@@ -204,7 +205,7 @@ export default function BuyerSavedPage() {
                   <div className="p-5">
                     <div className="flex items-center justify-between gap-3">
                       <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-                        {match?.score ?? 0}% match
+                        {buyerMatchLabel(match?.score)}
                       </span>
                       {listing?.sale_type === "rent" ? (
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">

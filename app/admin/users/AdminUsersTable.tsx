@@ -19,7 +19,7 @@ type AdminUser = {
   unsubscribed_at: string | null;
 };
 
-type Filter = "all" | "buyer" | "agent" | "seller" | "missing_profile" | "unconfirmed";
+type Filter = "all" | "buyer" | "agent" | "seller" | "admin" | "missing_profile" | "unconfirmed";
 
 export default function AdminUsersTable({ initialUsers }: { initialUsers: AdminUser[] }) {
   const [users, setUsers] = useState(initialUsers);
@@ -53,7 +53,14 @@ export default function AdminUsersTable({ initialUsers }: { initialUsers: AdminU
     );
   }, [filter, q, users]);
 
-  async function setRole(id: string, role: "buyer" | "agent" | "seller") {
+  async function setRole(id: string, role: "buyer" | "agent" | "seller" | "admin") {
+    if (role === "admin") {
+      const ok = window.confirm(
+        "Give this user admin access to protected HeyMies admin tools?"
+      );
+      if (!ok) return;
+    }
+
     setBusyId(id);
     setError(null);
 
@@ -94,6 +101,7 @@ export default function AdminUsersTable({ initialUsers }: { initialUsers: AdminU
             <option value="buyer">Buyers</option>
             <option value="agent">Agents</option>
             <option value="seller">Private sellers</option>
+            <option value="admin">Admins</option>
             <option value="missing_profile">Missing profile</option>
             <option value="unconfirmed">Unconfirmed</option>
           </select>
@@ -199,6 +207,13 @@ export default function AdminUsersTable({ initialUsers }: { initialUsers: AdminU
                     >
                       Seller
                     </button>
+                    <button
+                      disabled={busyId === user.id}
+                      onClick={() => setRole(user.id, "admin")}
+                      className="rounded-lg border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    >
+                      Admin
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -229,6 +244,8 @@ function StatusPill({ status }: { status: string }) {
       ? "border-sky-200 bg-sky-50 text-sky-800"
       : status === "agent"
         ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        : status === "admin"
+          ? "border-slate-900 bg-slate-900 text-white"
         : status === "seller" || status === "private_seller"
           ? "border-amber-200 bg-amber-50 text-amber-800"
           : "border-red-200 bg-red-50 text-red-700";
