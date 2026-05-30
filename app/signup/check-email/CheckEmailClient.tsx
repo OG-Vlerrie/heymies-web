@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
 export default function CheckEmailClient() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const next = searchParams.get("next");
   const role = searchParams.get("role");
+  const supabase = useMemo(() => supabaseBrowser(), []);
   const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
@@ -36,20 +38,21 @@ export default function CheckEmailClient() {
     setResendStatus("sending");
     setResendMessage(null);
 
-    const response = await fetch("/api/auth/resend-confirmation", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        role,
-        next: next || "/dashboard",
-      }),
-    });
-    const result = await response.json().catch(() => ({}));
+    const params = new URLSearchParams();
+    params.set("next", next || "/dashboard");
+    if (role) params.set("role", role);
 
-    if (!response.ok || !result?.ok) {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login?${params.toString()}`,
+      },
+    });
+
+    if (error) {
       setResendStatus("error");
-      setResendMessage(result?.error || "Could not resend confirmation email.");
+      setResendMessage(error.message);
       return;
     }
 

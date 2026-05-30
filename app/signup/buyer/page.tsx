@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { BUYER_FINANCE_OPTIONS, financeReadinessScore, isStrongFinanceStatus } from "@/lib/buyer-finance";
 import { buyerProfileStrengthLabel } from "@/lib/match-labels";
 import { loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
   full_name: string;
@@ -84,6 +85,7 @@ function BuyerSignupClient() {
   const router = useRouter();
   const search = useSearchParams();
   const nextUrl = search.get("next");
+  const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -267,6 +269,11 @@ function BuyerSignupClient() {
     ).slice(0, 8);
   }, [areaQuery]);
 
+  function confirmationRedirect() {
+    const next = nextUrl || "/dashboard/buyer";
+    return `${window.location.origin}/login?next=${encodeURIComponent(next)}&role=buyer`;
+  }
+
   async function submit() {
     setError(null);
 
@@ -299,22 +306,16 @@ function BuyerSignupClient() {
         budget_max: parseOptionalNumber(form.budget_max),
       };
 
-      const response = await fetch("/api/auth/signup-confirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: form.email.trim(),
-          password: form.password,
-          role: "buyer",
-          next: nextUrl || "/dashboard/buyer",
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: form.email.trim(),
+        password: form.password,
+        options: {
+          emailRedirectTo: confirmationRedirect(),
           data: payload,
-        }),
+        },
       });
-      const result = await response.json().catch(() => ({}));
 
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || "Could not send confirmation email.");
-      }
+      if (signUpError) throw new Error(signUpError.message);
 
       router.push(
         `/signup/check-email?role=buyer&email=${encodeURIComponent(
