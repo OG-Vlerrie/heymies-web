@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
 
 type FormState = {
   // Auth
@@ -55,6 +56,50 @@ type FormState = {
 };
 
 const STEPS = ["Account", "You", "Property", "Pricing", "Details", "Consent"];
+const DRAFT_KEY = "heymies_signup_draft_private_seller";
+
+const INITIAL_FORM: FormState = {
+  email: "",
+  password: "",
+  confirm: "",
+
+  full_name: "",
+  phone: "",
+  preferred_contact: "WhatsApp",
+
+  intent: "Sell",
+  property_type: "",
+  province: "",
+  city: "",
+  suburb: "",
+  street_address: "",
+
+  bedrooms: "",
+  bathrooms: "",
+  parking: "",
+  floor_size_m2: "",
+  erf_size_m2: "",
+
+  asking_price: "",
+  price_flexibility: "Negotiable",
+  target_timeframe: "",
+
+  bond_status: "",
+  rates_taxes_known: false,
+  rates_taxes_amount: "",
+  levies_known: false,
+  levies_amount: "",
+
+  reason_for_selling: "",
+  access_for_viewings: "",
+  occupancy: "",
+  available_from: "",
+
+  special_features: "",
+  notes: "",
+
+  popia_consent: false,
+};
 
 export default function PrivateSellerSignupPage() {
   const router = useRouter();
@@ -63,52 +108,17 @@ export default function PrivateSellerSignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState<FormState>({
-    email: "",
-    password: "",
-    confirm: "",
-
-    full_name: "",
-    phone: "",
-    preferred_contact: "WhatsApp",
-
-    intent: "Sell",
-    property_type: "",
-    province: "",
-    city: "",
-    suburb: "",
-    street_address: "",
-
-    bedrooms: "",
-    bathrooms: "",
-    parking: "",
-    floor_size_m2: "",
-    erf_size_m2: "",
-
-    asking_price: "",
-    price_flexibility: "Negotiable",
-    target_timeframe: "",
-
-    bond_status: "",
-    rates_taxes_known: false,
-    rates_taxes_amount: "",
-    levies_known: false,
-    levies_amount: "",
-
-    reason_for_selling: "",
-    access_for_viewings: "",
-    occupancy: "",
-    available_from: "",
-
-    special_features: "",
-    notes: "",
-
-    popia_consent: false,
-  });
+  const [form, setForm] = useState<FormState>(() =>
+    loadSignupDraft(DRAFT_KEY, INITIAL_FORM)
+  );
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((p) => ({ ...p, [key]: value }));
   }
+
+  useEffect(() => {
+    saveSignupDraft(DRAFT_KEY, form);
+  }, [form]);
 
   function sanitizePhone(v: string) {
     return v.replace(/[^\d+]/g, "");

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
 
 type FormState = {
   // Auth
@@ -39,6 +40,36 @@ type FormState = {
 };
 
 const STEPS = ["Account", "Profile", "Agency", "Performance", "Consent"];
+const DRAFT_KEY = "heymies_signup_draft_agent";
+
+const INITIAL_FORM: FormState = {
+  email: "",
+  password: "",
+  confirm: "",
+
+  full_name: "",
+  phone: "",
+  preferred_contact: "WhatsApp",
+
+  agency_name: "",
+  position_title: "",
+  ffc_number: "",
+  years_experience: "",
+  office_city: "",
+  office_suburb: "",
+
+  service_areas: "",
+  specialties: "",
+
+  avg_deals_per_month: "",
+  avg_commission_band: "",
+  current_lead_sources: "",
+  crm_tool: "",
+  team_size: "",
+
+  onboarding_goal: "",
+  popia_consent: false,
+};
 
 export default function AgentSignupPage() {
   const router = useRouter();
@@ -47,38 +78,17 @@ export default function AgentSignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [form, setForm] = useState<FormState>({
-    email: "",
-    password: "",
-    confirm: "",
-
-    full_name: "",
-    phone: "",
-    preferred_contact: "WhatsApp",
-
-    agency_name: "",
-    position_title: "",
-    ffc_number: "",
-    years_experience: "",
-    office_city: "",
-    office_suburb: "",
-
-    service_areas: "",
-    specialties: "",
-
-    avg_deals_per_month: "",
-    avg_commission_band: "",
-    current_lead_sources: "",
-    crm_tool: "",
-    team_size: "",
-
-    onboarding_goal: "",
-    popia_consent: false,
-  });
+  const [form, setForm] = useState<FormState>(() =>
+    loadSignupDraft(DRAFT_KEY, INITIAL_FORM)
+  );
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((p) => ({ ...p, [key]: value }));
   }
+
+  useEffect(() => {
+    saveSignupDraft(DRAFT_KEY, form);
+  }, [form]);
 
   function sanitizePhone(v: string) {
     return v.replace(/[^\d+]/g, "");

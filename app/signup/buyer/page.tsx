@@ -1,9 +1,10 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BUYER_FINANCE_OPTIONS, financeReadinessScore, isStrongFinanceStatus } from "@/lib/buyer-finance";
 import { buyerProfileStrengthLabel } from "@/lib/match-labels";
+import { loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
 
 type FormState = {
   full_name: string;
@@ -27,6 +28,7 @@ type FormState = {
 };
 
 const STEPS = ["Details", "Property", "Qualification"] as const;
+const DRAFT_KEY = "heymies_signup_draft_buyer";
 
 const PROPERTY_TYPE_OPTIONS = ["House", "Apartment", "Townhouse", "Land"] as const;
 
@@ -49,6 +51,27 @@ const PLUS_OPTIONS = ["", "1+", "2+", "3+", "4+", "5+", "6+"] as const;
 
 const PREAPPROVAL_URL = "https://www.ooba.co.za/home-loans/pre-approval/";
 
+const INITIAL_FORM: FormState = {
+  full_name: "",
+  phone: "",
+
+  budget_min: "",
+  budget_max: "",
+  property_types: [],
+  areas: [],
+  bedrooms_min: "",
+  bathrooms_min: "",
+
+  preapproved: "",
+  timeline: "",
+  selling_property: "",
+  popia_consent: false,
+
+  email: "",
+  password: "",
+  confirm: "",
+};
+
 export default function BuyerSignupPage() {
   return (
     <Suspense fallback={<main className="mx-auto max-w-3xl p-6">Loading...</main>}>
@@ -67,30 +90,17 @@ function BuyerSignupClient() {
   const [error, setError] = useState<string | null>(null);
   const [areaQuery, setAreaQuery] = useState("");
 
-  const [form, setForm] = useState<FormState>({
-    full_name: "",
-    phone: "",
-
-    budget_min: "",
-    budget_max: "",
-    property_types: [],
-    areas: [],
-    bedrooms_min: "",
-    bathrooms_min: "",
-
-    preapproved: "",
-    timeline: "",
-    selling_property: "",
-    popia_consent: false,
-
-    email: "",
-    password: "",
-    confirm: "",
-  });
+  const [form, setForm] = useState<FormState>(() =>
+    loadSignupDraft(DRAFT_KEY, INITIAL_FORM)
+  );
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  useEffect(() => {
+    saveSignupDraft(DRAFT_KEY, form);
+  }, [form]);
 
   const progress = useMemo(() => {
     return Math.round(((step + 1) / STEPS.length) * 100);
