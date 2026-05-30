@@ -141,7 +141,7 @@ export default function PrivateSellerSignupPage() {
   }
 
   function confirmationRedirect() {
-    return `${window.location.origin}/login?next=${encodeURIComponent("/dashboard/listings")}&role=seller`;
+    return `${window.location.origin}/login?next=${encodeURIComponent("/dashboard/listings")}`;
   }
 
   function validateStep(s: number): string | null {

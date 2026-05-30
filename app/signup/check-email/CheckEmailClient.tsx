@@ -40,7 +40,6 @@ export default function CheckEmailClient() {
 
     const params = new URLSearchParams();
     params.set("next", next || "/dashboard");
-    if (role) params.set("role", role);
 
     const { error } = await supabase.auth.resend({
       type: "signup",

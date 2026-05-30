@@ -111,7 +111,7 @@ export default function AgentSignupPage() {
   }
 
   function confirmationRedirect() {
-    return `${window.location.origin}/login?next=${encodeURIComponent("/dashboard")}&role=agent`;
+    return `${window.location.origin}/login?next=${encodeURIComponent("/dashboard")}`;
   }
 
   function validateStep(s: number): string | null {

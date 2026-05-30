@@ -271,7 +271,7 @@ function BuyerSignupClient() {
 
   function confirmationRedirect() {
     const next = nextUrl || "/dashboard/buyer";
-    return `${window.location.origin}/login?next=${encodeURIComponent(next)}&role=buyer`;
+    return `${window.location.origin}/login?next=${encodeURIComponent(next)}`;
   }
 
   async function submit() {
