@@ -2,14 +2,9 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 import { BUYER_FINANCE_OPTIONS, financeReadinessScore, isStrongFinanceStatus } from "@/lib/buyer-finance";
 import { buyerProfileStrengthLabel } from "@/lib/match-labels";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
   full_name: string;
@@ -67,6 +62,7 @@ function BuyerSignupClient() {
   const router = useRouter();
   const search = useSearchParams();
   const nextUrl = search.get("next");
+  const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -264,9 +260,7 @@ function BuyerSignupClient() {
   }, [areaQuery]);
 
   function confirmationRedirect() {
-    const params = new URLSearchParams();
-    if (nextUrl) params.set("next", nextUrl);
-    return `${window.location.origin}/login${params.toString() ? `?${params.toString()}` : ""}`;
+    return `${window.location.origin}/login?next=${encodeURIComponent(nextUrl || "/dashboard/buyer")}`;
   }
 
   async function submit() {
@@ -313,9 +307,9 @@ function BuyerSignupClient() {
       }
 
       router.push(
-        `/signup/check-email?role=buyer&email=${encodeURIComponent(form.email.trim())}${
-          nextUrl ? `&next=${encodeURIComponent(nextUrl)}` : ""
-        }`
+        `/signup/check-email?role=buyer&email=${encodeURIComponent(
+          form.email.trim()
+        )}&next=${encodeURIComponent(nextUrl || "/dashboard/buyer")}`
       );
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong.");
