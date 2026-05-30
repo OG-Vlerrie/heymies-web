@@ -79,16 +79,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing listingId" }, { status: 400 });
     }
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("full_name, phone")
+      .select("full_name, phone, role")
       .eq("id", user.id)
       .maybeSingle();
 
     if (profileError) {
+      console.error("Failed to load enquiry user profile:", profileError);
       return NextResponse.json(
-        { error: "Could not load user profile" },
+        { error: `Could not load user profile: ${profileError.message}` },
         { status: 500 }
+      );
+    }
+
+    let profile = profileData;
+    if (!profile) {
+      const { data: repairedProfile, error: repairError } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            id: user.id,
+            role: "buyer",
+            full_name: user.user_metadata?.full_name ?? null,
+            phone: user.user_metadata?.phone ?? null,
+          },
+          { onConflict: "id" }
+        )
+        .select("full_name, phone, role")
+        .single();
+
+      if (repairError) {
+        console.error("Failed to repair missing enquiry user profile:", repairError);
+        return NextResponse.json(
+          { error: `Could not create user profile: ${repairError.message}` },
+          { status: 500 }
+        );
+      }
+
+      profile = repairedProfile;
+    }
+
+    if (profile.role !== "buyer") {
+      return NextResponse.json(
+        { error: "Only buyer accounts can enquire on listings." },
+        { status: 403 }
       );
     }
 
