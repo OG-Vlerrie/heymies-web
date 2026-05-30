@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
   // Auth
@@ -43,7 +42,6 @@ const STEPS = ["Account", "Profile", "Agency", "Performance", "Consent"];
 
 export default function AgentSignupPage() {
   const router = useRouter();
-  const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -98,10 +96,6 @@ export default function AgentSignupPage() {
     if (!t) return null;
     const n = Number(t);
     return Number.isFinite(n) ? n : null;
-  }
-
-  function confirmationRedirect() {
-    return `${window.location.origin}/login?next=${encodeURIComponent("/dashboard")}`;
   }
 
   function validateStep(s: number): string | null {
@@ -193,16 +187,22 @@ export default function AgentSignupPage() {
         popia_consent: form.popia_consent,
       };
 
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password: form.password,
-        options: {
-          emailRedirectTo: confirmationRedirect(),
+      const response = await fetch("/api/auth/signup-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
+          role: "agent",
+          next: "/dashboard",
           data: payload,
-        },
+        }),
       });
+      const result = await response.json().catch(() => ({}));
 
-      if (signUpError) throw new Error(signUpError.message);
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "Could not send confirmation email.");
+      }
 
       router.push(
         `/signup/check-email?role=agent&email=${encodeURIComponent(

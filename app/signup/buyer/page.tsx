@@ -4,7 +4,6 @@ import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BUYER_FINANCE_OPTIONS, financeReadinessScore, isStrongFinanceStatus } from "@/lib/buyer-finance";
 import { buyerProfileStrengthLabel } from "@/lib/match-labels";
-import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
   full_name: string;
@@ -62,7 +61,6 @@ function BuyerSignupClient() {
   const router = useRouter();
   const search = useSearchParams();
   const nextUrl = search.get("next");
-  const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -259,10 +257,6 @@ function BuyerSignupClient() {
     ).slice(0, 8);
   }, [areaQuery]);
 
-  function confirmationRedirect() {
-    return `${window.location.origin}/login?next=${encodeURIComponent(nextUrl || "/dashboard/buyer")}`;
-  }
-
   async function submit() {
     setError(null);
 
@@ -278,32 +272,38 @@ function BuyerSignupClient() {
     setLoading(true);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password: form.password,
-        options: {
-          emailRedirectTo: confirmationRedirect(),
-          data: {
-            role: "buyer",
-            full_name: form.full_name.trim(),
-            phone: sanitizePhone(form.phone),
-            lead_score_estimate: computeLeadScore(),
-            property_types: form.property_types,
-            areas: form.areas,
-            bedrooms_min: parsePlusToNumber(form.bedrooms_min),
-            bathrooms_min: parsePlusToNumber(form.bathrooms_min),
-            preapproved: form.preapproved,
-            timeline: form.timeline,
-            selling_property: form.selling_property,
-            popia_consent: form.popia_consent,
-            budget_min: parseOptionalNumber(form.budget_min),
-            budget_max: parseOptionalNumber(form.budget_max),
-          },
-        },
-      });
+      const payload = {
+        role: "buyer",
+        full_name: form.full_name.trim(),
+        phone: sanitizePhone(form.phone),
+        lead_score_estimate: computeLeadScore(),
+        property_types: form.property_types,
+        areas: form.areas,
+        bedrooms_min: parsePlusToNumber(form.bedrooms_min),
+        bathrooms_min: parsePlusToNumber(form.bathrooms_min),
+        preapproved: form.preapproved,
+        timeline: form.timeline,
+        selling_property: form.selling_property,
+        popia_consent: form.popia_consent,
+        budget_min: parseOptionalNumber(form.budget_min),
+        budget_max: parseOptionalNumber(form.budget_max),
+      };
 
-      if (signUpError) {
-        throw new Error(signUpError.message);
+      const response = await fetch("/api/auth/signup-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
+          role: "buyer",
+          next: nextUrl || "/dashboard/buyer",
+          data: payload,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(result?.error || "Could not send confirmation email.");
       }
 
       router.push(
