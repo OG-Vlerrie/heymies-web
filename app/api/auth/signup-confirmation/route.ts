@@ -49,13 +49,19 @@ export async function POST(req: NextRequest) {
     });
 
     if (error || !data.properties?.action_link) {
+      console.error("Supabase signup link generation failed:", error);
       return NextResponse.json(
-        { ok: false, error: error?.message || "Could not create confirmation link." },
+        {
+          ok: false,
+          error: error?.message
+            ? `Supabase auth error: ${error.message}`
+            : "Supabase auth error: Could not create confirmation link.",
+        },
         { status: 500 }
       );
     }
 
-    await resend.emails.send({
+    const emailResult = await resend.emails.send({
       from: process.env.EMAIL_FROM,
       to: [email],
       subject: "Confirm your HeyMies account",
@@ -69,10 +75,19 @@ export async function POST(req: NextRequest) {
       }),
     });
 
+    if (emailResult.error) {
+      console.error("Resend confirmation email failed:", emailResult.error);
+      return NextResponse.json(
+        { ok: false, error: `Resend email error: ${emailResult.error.message}` },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error: any) {
+    console.error("Signup confirmation failed:", error);
     return NextResponse.json(
-      { ok: false, error: error?.message || "Could not send confirmation email." },
+      { ok: false, error: `Signup confirmation error: ${error?.message || "Could not send confirmation email."}` },
       { status: 500 }
     );
   }
