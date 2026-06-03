@@ -30,7 +30,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $heymies_new_user$
 declare
   meta jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
   user_role text := nullif(meta->>'role', '');
@@ -297,4 +297,4 @@ begin
 
   return new;
 end;
-$$;
+$heymies_new_user$;
