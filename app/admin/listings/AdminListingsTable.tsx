@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { formatDateZA, listingTypeLabel, saleTypeLabel, statusLabel } from "@/lib/display-format";
 
 type Listing = {
   id: string;
@@ -162,7 +163,7 @@ export default function AdminListingsTable({ initialListings }: { initialListing
                         {listing.title ?? "Untitled listing"}
                       </Link>
                       <p className="mt-1 text-xs text-slate-500">
-                        {listing.listing_type ?? "property"} / {listing.sale_type ?? "sale"} /{" "}
+                        {listingTypeLabel(listing.listing_type)} / {saleTypeLabel(listing.sale_type)} /{" "}
                         {listing.created_at ? formatDate(listing.created_at) : "-"}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
@@ -273,7 +274,7 @@ function StatusPill({ status }: { status: string }) {
 
   return (
     <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${cls}`}>
-      {status.replaceAll("_", " ")}
+      {statusLabel(status)}
     </span>
   );
 }
@@ -292,11 +293,5 @@ function formatPrice(listing: Listing) {
 }
 
 function formatDate(input: string) {
-  const date = new Date(input);
-  if (Number.isNaN(date.getTime())) return input;
-  return date.toLocaleDateString("en-ZA", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateZA(input);
 }

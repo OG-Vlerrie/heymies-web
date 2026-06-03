@@ -446,7 +446,7 @@ export default function EditListingPage() {
         }
       }
 
-      const { error: upErr } = await supabase
+      const { data: updatedListing, error: upErr } = await supabase
         .from("listings")
         .update({
           title: title.trim(),
@@ -492,9 +492,12 @@ export default function EditListingPage() {
           images: mergedImages,
           cover_image: finalCover,
         })
-        .eq("id", listingId);
+        .eq("id", listingId)
+        .select("id,title,description,status,sale_type,listing_type,price,price_per_month,suburb,city,province,cover_image,images")
+        .single();
 
       if (upErr) throw upErr;
+      if (!updatedListing) throw new Error("Listing update did not return the updated row.");
 
       setNewFiles([]);
       setNewPreviews((prev) => {
@@ -518,9 +521,8 @@ export default function EditListingPage() {
 
       setSaving(false);
 
-      // IMPORTANT: refresh so list pages refetch (server components)
+      router.push(`/dashboard/listings?updated=${encodeURIComponent(updatedListing.id)}`);
       router.refresh();
-      router.push("/dashboard/listings");
     } catch (e: any) {
       setSaving(false);
       setError(e?.message ?? "Failed to update listing.");

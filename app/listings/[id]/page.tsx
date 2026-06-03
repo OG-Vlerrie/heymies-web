@@ -2,6 +2,7 @@ import EnquiryGate from "@/components/listings/EnquiryGate";
 import CompareListingButton from "@/components/listings/CompareListingButton";
 import ListingMatchBadge from "@/components/listings/ListingMatchBadge";
 import SaveListingButton from "@/components/listings/SaveListingButton";
+import { listingTypeLabel, saleTypeLabel } from "@/lib/display-format";
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 
@@ -191,8 +192,8 @@ export default async function ListingDetailPage({
                 <KV label="Bathrooms" value={listing.bathrooms ?? "—"} />
                 <KV label="Garages" value={listing.garages ?? "—"} />
                 <KV label="Parking" value={listing.parking ?? "—"} />
-                <KV label="Property type" value={listing.listing_type ?? "—"} />
-                <KV label="Listing type" value={listing.sale_type ?? "—"} />
+                <KV label="Property type" value={listingTypeLabel(listing.listing_type)} />
+                <KV label="Listing type" value={saleTypeLabel(listing.sale_type)} />
               </div>
             </div>
 

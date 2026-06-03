@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateTimeZA } from "@/lib/display-format";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type BuyerAlert = {
@@ -298,7 +299,7 @@ export default function BuyerAlertsPage() {
                         </p>
                         {alert.last_checked_at ? (
                           <p className="mt-1 text-xs text-slate-500">
-                            Last checked {new Date(alert.last_checked_at).toLocaleString("en-ZA")}
+                            Last checked {formatDateTimeZA(alert.last_checked_at)}
                           </p>
                         ) : null}
                       </div>

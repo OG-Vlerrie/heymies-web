@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import CompareListingButton from "@/components/listings/CompareListingButton";
 import SaveListingButton from "@/components/listings/SaveListingButton";
+import { formatDateTimeZA } from "@/lib/display-format";
 import { isStrongFinanceStatus } from "@/lib/buyer-finance";
 import {
   scoreListingForBuyer,
@@ -144,15 +145,7 @@ function fmtListingPrice(listing?: Enquiry["listing"] | SavedItem["listing"]) {
 }
 
 function fmtDateTime(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("en-ZA", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeZA(iso);
 }
 
 function localDatetimeToIso(local: string) {

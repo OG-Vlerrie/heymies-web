@@ -22,6 +22,9 @@ type Agent = {
   email: string;
   phone: string | null;
   agency: string | null;
+  ffc_number: string | null;
+  avg_commission_percent: number | null;
+  avg_commission_band: string | null;
   areas: string | null;
   property_types: string | null;
   max_leads_per_week: number | null;
@@ -399,6 +402,9 @@ function normalizeAgents(rows: AgentRow[]) {
     email: agent.email ?? agent.contact_email ?? "",
     phone: agent.phone ?? null,
     agency: agent.agency ?? agent.agency_name ?? null,
+    ffc_number: agent.ffc_number ?? null,
+    avg_commission_percent: agent.avg_commission_percent ?? null,
+    avg_commission_band: agent.avg_commission_band ?? null,
     areas: agent.areas ?? agent.service_areas ?? null,
     property_types: agent.property_types ?? agent.specialties ?? null,
     max_leads_per_week: agent.max_leads_per_week ?? null,

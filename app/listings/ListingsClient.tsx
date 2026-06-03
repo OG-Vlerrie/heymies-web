@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import CompareListingButton from "@/components/listings/CompareListingButton";
 import SaveListingButton from "@/components/listings/SaveListingButton";
+import { saleTypeLabel } from "@/lib/display-format";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 export type PublicListing = {
@@ -231,7 +232,7 @@ function ListingCard({ listing }: { listing: PublicListing }) {
 
             {isRent ? (
               <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                Rent
+                {saleTypeLabel(listing.sale_type)}
               </span>
             ) : null}
           </div>

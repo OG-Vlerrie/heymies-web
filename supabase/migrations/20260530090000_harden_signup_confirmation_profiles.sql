@@ -71,6 +71,7 @@ alter table public.agents
   add column if not exists specialties text,
   add column if not exists property_types text,
   add column if not exists avg_deals_per_month numeric,
+  add column if not exists avg_commission_percent numeric,
   add column if not exists avg_commission_band text,
   add column if not exists current_lead_sources text,
   add column if not exists crm_tool text,

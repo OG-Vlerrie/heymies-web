@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  isValidCommissionPercent,
+  isValidFfcNumber,
+  normalizeFfcNumber,
+  parseCommissionPercent,
+} from "@/lib/agent-validation";
 import { loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
@@ -30,7 +36,7 @@ type FormState = {
 
   // Ops + performance
   avg_deals_per_month: string;
-  avg_commission_band: string;
+  avg_commission_percent: string;
   current_lead_sources: string;
   crm_tool: string;
   team_size: string;
@@ -63,7 +69,7 @@ const INITIAL_FORM: FormState = {
   specialties: "",
 
   avg_deals_per_month: "",
-  avg_commission_band: "",
+  avg_commission_percent: "",
   current_lead_sources: "",
   crm_tool: "",
   team_size: "",
@@ -110,6 +116,15 @@ export default function AgentSignupPage() {
     return Number.isFinite(n) ? n : null;
   }
 
+  function validateFfcNumber() {
+    if (!form.ffc_number.trim()) return "Enter your FFC number.";
+    if (!isValidFfcNumber(form.ffc_number)) {
+      return "Enter a valid FFC number using letters, numbers, spaces, hyphens, or slashes.";
+    }
+
+    return null;
+  }
+
   function confirmationRedirect() {
     return `${window.location.origin}/login?next=${encodeURIComponent("/dashboard")}`;
   }
@@ -132,6 +147,8 @@ export default function AgentSignupPage() {
     if (s === 2) {
       // Agency step — require at least agency + city + areas
       if (form.agency_name.trim().length < 2) return "Enter your agency name.";
+      const ffcError = validateFfcNumber();
+      if (ffcError) return ffcError;
       if (form.office_city.trim().length < 2) return "Enter your office city.";
       if (form.service_areas.trim().length < 2) return "Enter your service areas (comma separated).";
       return null;
@@ -139,6 +156,9 @@ export default function AgentSignupPage() {
 
     if (s === 3) {
       // Performance step — keep mostly optional but encourage structure
+      if (!isValidCommissionPercent(form.avg_commission_percent)) {
+        return "Average commission must be a percentage between 0 and 15.";
+      }
       if (form.crm_tool.trim().length === 0) return "Enter your CRM tool (or 'None').";
       return null;
     }
@@ -185,7 +205,7 @@ export default function AgentSignupPage() {
 
         agency_name: form.agency_name.trim(),
         position_title: form.position_title.trim() || null,
-        ffc_number: form.ffc_number.trim() || null,
+        ffc_number: normalizeFfcNumber(form.ffc_number),
         years_experience: asIntOrNull(form.years_experience),
         office_city: form.office_city.trim() || null,
         office_suburb: form.office_suburb.trim() || null,
@@ -194,7 +214,10 @@ export default function AgentSignupPage() {
         specialties: form.specialties.trim() || null,
 
         avg_deals_per_month: asNumOrNull(form.avg_deals_per_month),
-        avg_commission_band: form.avg_commission_band.trim() || null,
+        avg_commission_percent: parseCommissionPercent(form.avg_commission_percent),
+        avg_commission_band: form.avg_commission_percent.trim()
+          ? `${parseCommissionPercent(form.avg_commission_percent)}%`
+          : null,
         current_lead_sources: form.current_lead_sources.trim() || null,
         crm_tool: form.crm_tool.trim() || null,
         team_size: asIntOrNull(form.team_size),
@@ -345,12 +368,15 @@ export default function AgentSignupPage() {
                   />
                 </Field>
 
-                <Field label="FFC number (optional)">
+                <Field
+                  label="FFC number *"
+                  help="Your FFC number may be checked before approval. HeyMies does not perform official PPRA verification yet."
+                >
                   <input
                     className="w-full rounded-xl border border-slate-200 px-4 py-3"
                     value={form.ffc_number}
                     onChange={(e) => setField("ffc_number", e.target.value)}
-                    placeholder="If applicable"
+                    placeholder="e.g. FFC123456 or 2024/123456"
                   />
                 </Field>
               </div>
@@ -432,19 +458,22 @@ export default function AgentSignupPage() {
                   />
                 </Field>
 
-                <Field label="Avg commission band (optional)">
-                  <select
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.avg_commission_band}
-                    onChange={(e) => setField("avg_commission_band", e.target.value)}
-                  >
-                    <option value="">Select…</option>
-                    <option value="&lt; R10k">&lt; R10k</option>
-                    <option value="R10k–R25k">R10k–R25k</option>
-                    <option value="R25k–R50k">R25k–R50k</option>
-                    <option value="R50k–R100k">R50k–R100k</option>
-                    <option value="R100k+">R100k+</option>
-                  </select>
+                <Field
+                  label="Average commission % (optional)"
+                  help="Enter the percentage, for example 5 or 7.5."
+                >
+                  <div className="relative">
+                    <input
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 pr-10"
+                      value={form.avg_commission_percent}
+                      onChange={(e) => setField("avg_commission_percent", e.target.value)}
+                      placeholder="e.g. 5 or 7.5"
+                      inputMode="decimal"
+                    />
+                    <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">
+                      %
+                    </span>
+                  </div>
                 </Field>
               </div>
 
@@ -556,11 +585,12 @@ export default function AgentSignupPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, help, children }: { label: string; help?: string; children: React.ReactNode }) {
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       {children}
+      {help ? <span className="mt-1 block text-xs text-slate-500">{help}</span> : null}
     </label>
   );
 }

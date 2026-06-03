@@ -3,18 +3,29 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateTimeZA, saleTypeLabel, statusLabel } from "@/lib/display-format";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type Listing = {
   id: string;
   title: string;
   price: number | null;
+  price_per_month: number | null;
+  sale_type: string | null;
   suburb: string | null;
   city: string | null;
   status: string;
   created_at: string;
   cover_image: string | null;
 };
+
+function formatListingPrice(listing: Listing) {
+  const value = listing.sale_type === "rent" ? listing.price_per_month : listing.price;
+  if (!value) return "-";
+
+  const formatted = `R ${Number(value).toLocaleString("en-ZA")}`;
+  return listing.sale_type === "rent" ? `${formatted} / month` : formatted;
+}
 
 type Profile = {
   role: string;
@@ -43,7 +54,7 @@ export default function ListingsPage() {
 
       const { data, error: lErr } = await supabase
   .from("listings")
-  .select("id, title, price, suburb, city, status, created_at, cover_image")
+  .select("id, title, price, price_per_month, sale_type, suburb, city, status, created_at, cover_image")
   .eq("agent_id", user.id)
   .neq("status", "inactive")
   .order("created_at", { ascending: false })
@@ -124,14 +135,14 @@ export default function ListingsPage() {
     <div>
       <p className="font-medium text-slate-900">{l.title}</p>
       <p className="mt-1 text-sm text-slate-600">
-        {(l.suburb ?? "—")}, {(l.city ?? "—")} • {l.status}
+        {(l.suburb ?? "-")}, {(l.city ?? "-")} • {saleTypeLabel(l.sale_type)} • {statusLabel(l.status)} • {formatDateTimeZA(l.created_at)}
       </p>
     </div>
   </div>
 
   <div className="flex items-center gap-2">
   <div className="mr-2 text-sm text-slate-700">
-    {l.price ? `R ${Number(l.price).toLocaleString()}` : "—"}
+    {formatListingPrice(l)}
   </div>
 
   <Link

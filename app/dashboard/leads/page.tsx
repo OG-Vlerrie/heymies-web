@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { isStrongFinanceStatus } from "@/lib/buyer-finance";
+import { formatDateTimeZA } from "@/lib/display-format";
 import { scoreListingForBuyer, type BuyerMatchProfile } from "@/lib/matching";
 
 type Role = "agent" | "seller" | "buyer" | "admin";
@@ -71,14 +72,7 @@ function formatListingPrice(listing?: EnquiryLead["listing"]) {
 }
 
 function formatDate(iso: string) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("en-ZA", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeZA(iso);
 }
 
 function oneRelated<T>(value: T | T[] | null | undefined) {

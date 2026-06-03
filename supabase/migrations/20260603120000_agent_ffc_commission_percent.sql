@@ -1,130 +1,29 @@
-update public.profiles
-set role = 'agent'
-where id in (
-  select user_id
-  from public.agents
-  where user_id is not null
-);
+alter table public.agents
+  add column if not exists avg_commission_percent numeric;
 
-update auth.users
-set raw_user_meta_data = jsonb_set(
-  coalesce(raw_user_meta_data, '{}'::jsonb),
-  '{role}',
-  '"agent"'::jsonb,
-  true
-)
-where id in (
-  select user_id
-  from public.agents
-  where user_id is not null
-);
+alter table public.agents
+  drop constraint if exists agents_ffc_number_format_chk;
 
-update public.profiles
-set role = 'seller'
-where id in (
-  select user_id
-  from public.private_sellers
-  where user_id is not null
-)
-and id not in (
-  select user_id
-  from public.agents
-  where user_id is not null
-);
+alter table public.agents
+  add constraint agents_ffc_number_format_chk
+  check (
+    ffc_number is null
+    or (
+      char_length(trim(ffc_number)) between 5 and 30
+      and trim(ffc_number) ~ '^[A-Za-z0-9][A-Za-z0-9[:space:]/-]+$'
+      and length(regexp_replace(ffc_number, '\D', '', 'g')) >= 4
+    )
+  );
 
-update auth.users
-set raw_user_meta_data = jsonb_set(
-  coalesce(raw_user_meta_data, '{}'::jsonb),
-  '{role}',
-  '"seller"'::jsonb,
-  true
-)
-where id in (
-  select user_id
-  from public.private_sellers
-  where user_id is not null
-)
-and id not in (
-  select user_id
-  from public.agents
-  where user_id is not null
-);
+alter table public.agents
+  drop constraint if exists agents_avg_commission_percent_chk;
 
-delete from public.buyers
-where user_id in (
-  select id
-  from public.profiles
-  where role in ('agent', 'seller')
-);
-
-delete from public.buyers
-where user_id in (
-  select user_id
-  from public.agents
-  where user_id is not null
-)
-or user_id in (
-  select user_id
-  from public.private_sellers
-  where user_id is not null
-);
-
-with ranked_buyers as (
-  select
-    ctid,
-    row_number() over (
-      partition by user_id
-      order by created_at desc nulls last, id desc
-    ) as row_number
-  from public.buyers
-  where user_id is not null
-)
-delete from public.buyers
-using ranked_buyers
-where public.buyers.ctid = ranked_buyers.ctid
-and ranked_buyers.row_number > 1;
-
-with ranked_agents as (
-  select
-    ctid,
-    row_number() over (
-      partition by user_id
-      order by created_at desc nulls last, id desc
-    ) as row_number
-  from public.agents
-  where user_id is not null
-)
-delete from public.agents
-using ranked_agents
-where public.agents.ctid = ranked_agents.ctid
-and ranked_agents.row_number > 1;
-
-with ranked_sellers as (
-  select
-    ctid,
-    row_number() over (
-      partition by user_id
-      order by created_at desc nulls last, id desc
-    ) as row_number
-  from public.private_sellers
-  where user_id is not null
-)
-delete from public.private_sellers
-using ranked_sellers
-where public.private_sellers.ctid = ranked_sellers.ctid
-and ranked_sellers.row_number > 1;
-
-create unique index if not exists buyers_user_id_unique_idx
-on public.buyers (user_id)
-where user_id is not null;
-
-create unique index if not exists agents_user_id_unique_idx
-on public.agents (user_id)
-where user_id is not null;
-
-create unique index if not exists private_sellers_user_id_unique_idx
-on public.private_sellers (user_id)
-where user_id is not null;
+alter table public.agents
+  add constraint agents_avg_commission_percent_chk
+  check (
+    avg_commission_percent is null
+    or (avg_commission_percent > 0 and avg_commission_percent <= 15)
+  );
 
 create or replace function public.handle_heymies_new_user()
 returns trigger

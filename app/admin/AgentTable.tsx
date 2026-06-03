@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatPercent, statusLabel } from "@/lib/display-format";
 
 type Agent = {
   id: string;
@@ -10,6 +11,9 @@ type Agent = {
   email: string;
   phone: string | null;
   agency: string | null;
+  ffc_number: string | null;
+  avg_commission_percent: number | null;
+  avg_commission_band: string | null;
   areas: string | null;
   property_types: string | null;
   max_leads_per_week: number | null;
@@ -35,6 +39,7 @@ export default function AgentTable({ initialAgents }: { initialAgents: Agent[] }
         a.email,
         a.phone || "",
         a.agency || "",
+        a.ffc_number || "",
         a.areas || "",
         a.property_types || "",
         a.status,
@@ -119,6 +124,8 @@ export default function AgentTable({ initialAgents }: { initialAgents: Agent[] }
               <th className="px-4 py-3 text-left font-semibold">Name</th>
               <th className="px-4 py-3 text-left font-semibold">Email</th>
               <th className="px-4 py-3 text-left font-semibold">Agency</th>
+              <th className="px-4 py-3 text-left font-semibold">FFC</th>
+              <th className="px-4 py-3 text-left font-semibold">Commission</th>
               <th className="px-4 py-3 text-left font-semibold">Areas</th>
               <th className="px-4 py-3 text-left font-semibold">Types</th>
               <th className="px-4 py-3 text-left font-semibold">Max/wk</th>
@@ -141,7 +148,7 @@ export default function AgentTable({ initialAgents }: { initialAgents: Agent[] }
                         : "bg-amber-50 text-amber-700",
                     ].join(" ")}
                   >
-                    {a.status}
+                    {statusLabel(a.status)}
                   </span>
                 </td>
 
@@ -157,6 +164,12 @@ export default function AgentTable({ initialAgents }: { initialAgents: Agent[] }
                 </td>
 
                 <td className="px-4 py-3 text-slate-600">{a.agency || "-"}</td>
+                <td className="px-4 py-3 text-slate-600">{a.ffc_number || "-"}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {a.avg_commission_percent !== null
+                    ? formatPercent(a.avg_commission_percent)
+                    : a.avg_commission_band || "-"}
+                </td>
                 <td className="px-4 py-3 text-slate-600">{a.areas || "-"}</td>
                 <td className="px-4 py-3 text-slate-600">{a.property_types || "-"}</td>
                 <td className="px-4 py-3 text-slate-600">{a.max_leads_per_week ?? "-"}</td>
@@ -199,7 +212,7 @@ export default function AgentTable({ initialAgents }: { initialAgents: Agent[] }
 
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-slate-600">
+                <td colSpan={11} className="px-4 py-10 text-slate-600">
                   No agents match.
                 </td>
               </tr>

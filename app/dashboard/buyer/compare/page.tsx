@@ -8,6 +8,7 @@ import {
   type CompareListingSnapshot,
 } from "@/components/listings/CompareListingButton";
 import SaveListingButton from "@/components/listings/SaveListingButton";
+import { listingTypeLabel } from "@/lib/display-format";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { scoreListingForBuyer, type BuyerMatchProfile } from "@/lib/matching";
 import { buyerMatchLabel } from "@/lib/match-labels";
@@ -225,7 +226,7 @@ export default function BuyerComparePage() {
 
               <Row label="Price" values={listings.map(displayPrice)} />
               <Row label="Area" values={listings.map((l) => [l.suburb, l.city].filter(Boolean).join(", ") || "-")} />
-              <Row label="Type" values={listings.map((l) => l.listing_type ?? "-")} />
+              <Row label="Type" values={listings.map((l) => listingTypeLabel(l.listing_type))} />
               <Row label="Beds" values={listings.map((l) => String(l.bedrooms ?? "-"))} />
               <Row label="Baths" values={listings.map((l) => String(l.bathrooms ?? "-"))} />
               <Row label="Parking" values={listings.map((l) => String(l.parking ?? "-"))} />
