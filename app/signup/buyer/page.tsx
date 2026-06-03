@@ -4,7 +4,13 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BUYER_FINANCE_OPTIONS, financeReadinessScore, isStrongFinanceStatus } from "@/lib/buyer-finance";
 import { buyerProfileStrengthLabel } from "@/lib/match-labels";
-import { loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
+import { locationLabel, searchSouthAfricanLocations } from "@/lib/south-african-locations";
+import {
+  clearSignupDraft,
+  getSignupDraftSessionId,
+  loadSignupDraftFromKeys,
+  saveSignupDraft,
+} from "@/lib/signup-drafts";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
@@ -32,21 +38,6 @@ const STEPS = ["Details", "Property", "Qualification"] as const;
 const DRAFT_KEY = "heymies_signup_draft_buyer";
 
 const PROPERTY_TYPE_OPTIONS = ["House", "Apartment", "Townhouse", "Land"] as const;
-
-const AREA_SUGGESTIONS = [
-  "Sandton",
-  "Bryanston",
-  "Fourways",
-  "Rosebank",
-  "Melrose",
-  "Randburg",
-  "Midrand",
-  "Centurion",
-  "Pretoria East",
-  "Bedfordview",
-  "Edenvale",
-  "Kempton Park",
-] as const;
 
 const PLUS_OPTIONS = ["", "1+", "2+", "3+", "4+", "5+", "6+"] as const;
 
@@ -87,22 +78,71 @@ function BuyerSignupClient() {
   const nextUrl = search.get("next");
   const supabase = useMemo(() => supabaseBrowser(), []);
 
-  const [step, setStep] = useState(0);
+  const [draftSessionId] = useState(() => getSignupDraftSessionId("buyer"));
+  const [step, setStep] = useState(() => {
+    if (typeof window === "undefined") return 0;
+
+    const saved = window.localStorage.getItem(`${DRAFT_KEY}:step:${getSignupDraftSessionId("buyer")}`);
+    const parsed = saved ? Number(saved) : 0;
+    return Number.isInteger(parsed) ? Math.max(0, Math.min(STEPS.length - 1, parsed)) : 0;
+  });
+  const [authenticatedUserId, setAuthenticatedUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [areaQuery, setAreaQuery] = useState("");
 
   const [form, setForm] = useState<FormState>(() =>
-    loadSignupDraft(DRAFT_KEY, INITIAL_FORM)
+    loadSignupDraftFromKeys(
+      [DRAFT_KEY, `${DRAFT_KEY}:session:${getSignupDraftSessionId("buyer")}`],
+      INITIAL_FORM
+    )
   );
+
+  const draftKeys = useMemo(() => {
+    const keys = [DRAFT_KEY, `${DRAFT_KEY}:session:${draftSessionId}`];
+    const email = form.email.trim().toLowerCase();
+
+    if (email) keys.push(`${DRAFT_KEY}:email:${email}`);
+    if (authenticatedUserId) keys.push(`${DRAFT_KEY}:user:${authenticatedUserId}`);
+
+    return keys;
+  }, [authenticatedUserId, draftSessionId, form.email]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   useEffect(() => {
-    saveSignupDraft(DRAFT_KEY, form);
-  }, [form]);
+    draftKeys.forEach((key) => saveSignupDraft(key, form));
+  }, [draftKeys, form]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(`${DRAFT_KEY}:step:${draftSessionId}`, String(step));
+  }, [draftSessionId, step]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data.user;
+
+      if (!user || cancelled) return;
+
+      setAuthenticatedUserId(user.id);
+
+      if (!form.email.trim() && user.email) {
+        setField("email", user.email);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // Only run this once on mount; form updates are handled by the sync effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase]);
 
   const progress = useMemo(() => {
     return Math.round(((step + 1) / STEPS.length) * 100);
@@ -126,6 +166,47 @@ function BuyerSignupClient() {
     const parsed = Number(value.replace("+", ""));
     return Number.isFinite(parsed) ? parsed : null;
   }
+
+  function buyerPayload() {
+    return {
+      user_id: authenticatedUserId,
+      email: form.email.trim() || null,
+      full_name: form.full_name.trim(),
+      phone: sanitizePhone(form.phone),
+      budget_min: parseOptionalNumber(form.budget_min),
+      budget_max: parseOptionalNumber(form.budget_max),
+      property_types: form.property_types,
+      areas: form.areas,
+      areas_multi: form.areas,
+      bedrooms_min: parsePlusToNumber(form.bedrooms_min),
+      bathrooms_min: parsePlusToNumber(form.bathrooms_min),
+      preapproved: form.preapproved || null,
+      timeline: form.timeline || null,
+      selling_property: form.selling_property || null,
+      popia_consent: form.popia_consent,
+      lead_score: computeLeadScore(),
+    };
+  }
+
+  useEffect(() => {
+    if (!authenticatedUserId) return;
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        await supabase
+          .from("buyers")
+          .upsert(buyerPayload(), {
+            onConflict: "user_id",
+          })
+          .throwOnError();
+      } catch {
+        // Local draft persistence remains the source of truth if background sync is unavailable.
+      }
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticatedUserId, form, supabase]);
 
   function computeLeadScore() {
     let score = 0;
@@ -258,20 +339,32 @@ function BuyerSignupClient() {
   }
 
   const filteredAreas = useMemo(() => {
-    const q = areaQuery.trim().toLowerCase();
-
-    if (!q) {
-      return AREA_SUGGESTIONS.slice(0, 8);
-    }
-
-    return AREA_SUGGESTIONS.filter((area) =>
-      area.toLowerCase().includes(q)
-    ).slice(0, 8);
+    return searchSouthAfricanLocations(areaQuery, 12);
   }, [areaQuery]);
 
   function confirmationRedirect() {
     const next = nextUrl || "/dashboard/buyer";
     return `${window.location.origin}/login?next=${encodeURIComponent(next)}`;
+  }
+
+  function selectedAreaValue(label: string, suburb: string) {
+    const normalizedSuburb = suburb.toLowerCase();
+    return (
+      form.areas.find(
+        (area) => area === label || area.trim().toLowerCase() === normalizedSuburb
+      ) ?? null
+    );
+  }
+
+  function toggleArea(label: string, suburb: string) {
+    const selected = selectedAreaValue(label, suburb);
+
+    if (selected) {
+      removeChip("areas", selected);
+      return;
+    }
+
+    toggleArrayValue("areas", label);
   }
 
   async function submit() {
@@ -296,6 +389,7 @@ function BuyerSignupClient() {
         lead_score_estimate: computeLeadScore(),
         property_types: form.property_types,
         areas: form.areas,
+        areas_multi: form.areas,
         bedrooms_min: parsePlusToNumber(form.bedrooms_min),
         bathrooms_min: parsePlusToNumber(form.bathrooms_min),
         preapproved: form.preapproved,
@@ -316,6 +410,8 @@ function BuyerSignupClient() {
       });
 
       if (signUpError) throw new Error(signUpError.message);
+
+      clearSignupDraft([...draftKeys, `${DRAFT_KEY}:step:${draftSessionId}`]);
 
       router.push(
         `/signup/check-email?role=buyer&email=${encodeURIComponent(
@@ -490,13 +586,14 @@ function BuyerSignupClient() {
                 <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-2">
                   <div className="flex flex-wrap gap-2">
                     {filteredAreas.map((area) => {
-                      const active = form.areas.includes(area);
+                      const label = locationLabel(area);
+                      const active = Boolean(selectedAreaValue(label, area.suburb));
 
                       return (
                         <button
-                          key={area}
+                          key={label}
                           type="button"
-                          onClick={() => toggleArrayValue("areas", area)}
+                          onClick={() => toggleArea(label, area.suburb)}
                           className={[
                             "rounded-full border px-3 py-1.5 text-sm",
                             active
@@ -504,7 +601,7 @@ function BuyerSignupClient() {
                               : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
                           ].join(" ")}
                         >
-                          {area}
+                          {label}
                         </button>
                       );
                     })}

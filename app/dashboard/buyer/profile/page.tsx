@@ -5,22 +5,9 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { BUYER_FINANCE_OPTIONS, financeReadinessScore, isStrongFinanceStatus } from "@/lib/buyer-finance";
 import { buyerProfileStrengthLabel } from "@/lib/match-labels";
+import { locationLabel, searchSouthAfricanLocations } from "@/lib/south-african-locations";
 
 const PROPERTY_TYPE_OPTIONS = ["House", "Apartment", "Townhouse", "Land"];
-const AREA_SUGGESTIONS = [
-  "Sandton",
-  "Bryanston",
-  "Fourways",
-  "Rosebank",
-  "Melrose",
-  "Randburg",
-  "Midrand",
-  "Centurion",
-  "Pretoria East",
-  "Bedfordview",
-  "Edenvale",
-  "Kempton Park",
-];
 const PLUS_OPTIONS = ["", "1+", "2+", "3+", "4+", "5+", "6+"];
 
 type BuyerRow = {
@@ -31,6 +18,7 @@ type BuyerRow = {
   budget_min: number | null;
   budget_max: number | null;
   property_types: string[] | null;
+  areas: string[] | null;
   areas_multi: string[] | null;
   bedrooms_min: number | null;
   bathrooms_min: number | null;
@@ -99,10 +87,28 @@ export default function BuyerProfilePage() {
     setForm((prev) => ({ ...prev, [key]: prev[key].filter((v) => v !== value) }));
   }
 
+  function selectedAreaValue(label: string, suburb: string) {
+    const normalizedSuburb = suburb.toLowerCase();
+    return (
+      form.areas_multi.find(
+        (area) => area === label || area.trim().toLowerCase() === normalizedSuburb
+      ) ?? null
+    );
+  }
+
+  function toggleArea(label: string, suburb: string) {
+    const selected = selectedAreaValue(label, suburb);
+
+    if (selected) {
+      removeChip("areas_multi", selected);
+      return;
+    }
+
+    toggleArrayValue("areas_multi", label);
+  }
+
   const filteredAreas = useMemo(() => {
-    const q = areaQuery.trim().toLowerCase();
-    if (!q) return AREA_SUGGESTIONS.slice(0, 10);
-    return AREA_SUGGESTIONS.filter((a) => a.toLowerCase().includes(q)).slice(0, 10);
+    return searchSouthAfricanLocations(areaQuery, 12);
   }, [areaQuery]);
 
   function computeLeadScore() {
@@ -184,7 +190,7 @@ export default function BuyerProfilePage() {
           budget_min: row.budget_min?.toString() ?? "",
           budget_max: row.budget_max?.toString() ?? "",
           property_types: row.property_types ?? [],
-          areas_multi: row.areas_multi ?? [],
+          areas_multi: row.areas_multi?.length ? row.areas_multi : row.areas ?? [],
           bedrooms_min: row.bedrooms_min ? `${row.bedrooms_min}+` : "",
           bathrooms_min: row.bathrooms_min ? `${row.bathrooms_min}+` : "",
           preapproved: row.preapproved ?? "",
@@ -228,6 +234,7 @@ export default function BuyerProfilePage() {
         budget_min: min,
         budget_max: max,
         property_types: form.property_types,
+        areas: form.areas_multi,
         areas_multi: form.areas_multi,
         bedrooms_min: plusToInt(form.bedrooms_min),
         bathrooms_min: plusToInt(form.bathrooms_min),
@@ -349,13 +356,14 @@ export default function BuyerProfilePage() {
 
               <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-2">
                 <div className="flex flex-wrap gap-2">
-                  {filteredAreas.map((a) => {
-                    const active = form.areas_multi.includes(a);
+                  {filteredAreas.map((area) => {
+                    const label = locationLabel(area);
+                    const active = Boolean(selectedAreaValue(label, area.suburb));
                     return (
                       <button
-                        key={a}
+                        key={label}
                         type="button"
-                        onClick={() => toggleArrayValue("areas_multi", a)}
+                        onClick={() => toggleArea(label, area.suburb)}
                         className={[
                           "rounded-full border px-3 py-1.5 text-sm",
                           active
@@ -363,7 +371,7 @@ export default function BuyerProfilePage() {
                             : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
                         ].join(" ")}
                       >
-                        {a}
+                        {label}
                       </button>
                     );
                   })}

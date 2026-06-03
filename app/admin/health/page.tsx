@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { describeSupabaseAdminKey, supabaseAdmin } from "@/lib/supabase/admin";
 
 type HealthStatus = "ok" | "warn" | "bad";
 
@@ -33,6 +33,7 @@ export default async function AdminHealthPage() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
+  const supabaseSecret = process.env.SUPABASE_SECRET_KEY?.trim() ?? "";
   const resendKey = process.env.RESEND_API_KEY?.trim() ?? "";
   const emailFrom = process.env.EMAIL_FROM?.trim() ?? "";
   const cronSecret = process.env.CRON_SECRET?.trim() ?? "";
@@ -42,7 +43,12 @@ export default async function AdminHealthPage() {
   const configChecks: HealthCheck[] = [
     checkPresent("Supabase URL", supabaseUrl, "NEXT_PUBLIC_SUPABASE_URL is required for Supabase clients."),
     checkPresent("Supabase anon key", anonKey, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required for browser auth."),
-    checkPresent("Supabase service role", serviceRole, "SUPABASE_SERVICE_ROLE_KEY is required for admin, Mia, and cron jobs."),
+    checkPresent("Supabase admin key", serviceRole || supabaseSecret, "SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY is required for admin, Mia, and cron jobs."),
+    {
+      label: "Supabase admin key fingerprint",
+      status: adminKeyStatus(describeSupabaseAdminKey()),
+      detail: adminKeyDetail(describeSupabaseAdminKey()),
+    },
     checkPresent("Resend API key", resendKey, "RESEND_API_KEY is required for all app-sent emails."),
     {
       label: "Email sender",
@@ -76,7 +82,7 @@ export default async function AdminHealthPage() {
   let events: EventRow[] = [];
   let matches: MatchRow[] = [];
 
-  if (supabaseUrl && serviceRole) {
+  if (supabaseUrl && (serviceRole || supabaseSecret)) {
     const supabase = supabaseAdmin();
     const now = Date.now();
     const dayAgoIso = new Date(now - 24 * 60 * 60 * 1000).toISOString();
@@ -330,6 +336,40 @@ function checkPresent(label: string, value: string, missingDetail: string): Heal
     status: value ? "ok" : "bad",
     detail: value ? "Configured." : missingDetail,
   };
+}
+
+function adminKeyStatus(info: ReturnType<typeof describeSupabaseAdminKey>): HealthStatus {
+  if (info.keyType === "missing" || info.keyType === "publishable") return "bad";
+  if (info.keyType === "jwt" && info.jwtRole !== "service_role") return "bad";
+  if (info.keyType === "jwt" && info.jwtRef && info.anonRef && info.jwtRef !== info.anonRef) return "bad";
+  if (info.keyType === "unknown") return "warn";
+  return "ok";
+}
+
+function adminKeyDetail(info: ReturnType<typeof describeSupabaseAdminKey>) {
+  const parts = [
+    `URL project: ${info.projectRef}`,
+    `key type: ${info.keyType}`,
+    `length: ${info.keyLength}`,
+  ];
+
+  if (info.jwtRole) parts.push(`JWT role: ${info.jwtRole}`);
+  if (info.jwtRef) parts.push(`JWT project: ${info.jwtRef}`);
+  if (info.anonRef) parts.push(`anon project: ${info.anonRef}`);
+
+  if (info.keyType === "publishable") {
+    parts.push("This is a public key, not an admin key.");
+  }
+
+  if (info.keyType === "jwt" && info.jwtRole !== "service_role") {
+    parts.push("Expected JWT role service_role.");
+  }
+
+  if (info.keyType === "jwt" && info.jwtRef && info.anonRef && info.jwtRef !== info.anonRef) {
+    parts.push("Admin key and anon key belong to different Supabase projects.");
+  }
+
+  return parts.join(" / ");
 }
 
 async function safeCount(query: PromiseLike<any>, label: string) {
