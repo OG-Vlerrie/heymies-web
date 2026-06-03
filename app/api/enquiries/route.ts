@@ -242,6 +242,11 @@ export async function POST(req: NextRequest) {
       readinessScore: number;
       propertyFitScore: number | null;
     }) {
+      if (!resend) {
+        console.error("Skipping enquiry email because RESEND_API_KEY is not configured.");
+        return;
+      }
+
       try {
         const agentProfile = await getAgentRecipients();
 
@@ -304,6 +309,10 @@ export async function POST(req: NextRequest) {
       responseActions: BuyerResponseAction[];
     }) {
       if (!email) return;
+      if (!resend) {
+        console.error("Skipping buyer nurture email because RESEND_API_KEY is not configured.");
+        return;
+      }
 
       try {
         const preferences = await ensureEmailPreference({
@@ -911,6 +920,10 @@ async function sendAgentReadyResponseEmail({
   }
 
   if (recipients.size === 0) return;
+  if (!resend) {
+    console.error("Skipping agent-ready response email because RESEND_API_KEY is not configured.");
+    return;
+  }
 
   const listingTitle = enquiry.listing?.title ?? "a listing";
 

@@ -420,6 +420,11 @@ async function sendNurtureEmail({
   preferences: Awaited<ReturnType<typeof ensureEmailPreference>>;
   origin: string;
 }) {
+  if (!resend) {
+    console.error("Skipping scheduled nurture email because RESEND_API_KEY is not configured.");
+    return false;
+  }
+
   const firstName = buyerName?.trim().split(" ")[0] || "there";
   const listingUrl = `${origin}/listings/${enquiry.listing_id}`;
   const actionLinks = message.responseActions

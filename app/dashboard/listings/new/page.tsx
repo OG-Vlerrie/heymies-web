@@ -338,12 +338,41 @@ export default function NewListingPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "AI generation failed.");
 
       setDescription(data.description || "");
     } catch (e: any) {
-      setError(e?.message ?? "AI generation failed.");
+      setDescription(
+        generateListingDescription({
+          saleType,
+          listingType,
+          title,
+
+          suburb,
+          city,
+          province,
+
+          priceNum,
+          depositNum: cleanNumber(deposit),
+          availableFrom,
+
+          bedroomsNum: cleanInt(bedrooms),
+          bathroomsNum: cleanNumber(bathrooms),
+          garagesNum: cleanInt(garages),
+          parkingNum: cleanInt(parking),
+          floorSizeNum: cleanInt(floorSize),
+          erfSizeNum: cleanInt(erfSize),
+
+          petsAllowed,
+          furnished,
+          features,
+
+          levyNum: cleanNumber(levy),
+          ratesTaxesNum: cleanNumber(ratesTaxes),
+        })
+      );
+      setError("AI generation is unavailable, so I added a draft description from the listing details.");
     } finally {
       setAiLoading(false);
     }

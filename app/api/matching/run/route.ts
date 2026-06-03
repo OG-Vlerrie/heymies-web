@@ -239,6 +239,10 @@ async function sendMatchEmail({
   });
 
   if (!preferences.allowed) return false;
+  if (!resend) {
+    console.error("Skipping match email because RESEND_API_KEY is not configured.");
+    return false;
+  }
 
   try {
     const response = await resend.emails.send({

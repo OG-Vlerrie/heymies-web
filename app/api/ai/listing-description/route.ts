@@ -32,8 +32,8 @@ export async function POST(req: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: "Missing OPENAI_API_KEY in environment" },
-        { status: 500 }
+        { error: "AI description generation is not configured." },
+        { status: 503 }
       );
     }
 
@@ -41,7 +41,10 @@ export async function POST(req: Request) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const body = (await req.json()) as Payload;
+    const body = (await req.json().catch(() => null)) as Payload | null;
+    if (!body) {
+      return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+    }
 
     const prompt = `
 Write a clean, professional South African property listing description.
@@ -94,7 +97,7 @@ ${JSON.stringify(body, null, 2)}
 
     return NextResponse.json(
       { error: message, status },
-      { status: 500 }
+      { status: typeof status === "number" && status >= 400 && status < 600 ? status : 500 }
     );
   }
 }

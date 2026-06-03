@@ -51,21 +51,6 @@ export default function DashboardPage() {
 
       setProfile(data as Profile);
 
-      if (data.role === "seller" && sessionRes.session?.access_token) {
-        const draftRes = await fetch("/api/seller/draft-listing", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${sessionRes.session.access_token}`,
-          },
-        });
-        const draftData = await draftRes.json().catch(() => ({}));
-
-        if (draftRes.ok && draftData?.created && draftData?.listingId) {
-          router.replace(`/dashboard/listings/${draftData.listingId}/edit?from=seller-signup`);
-          return;
-        }
-      }
-
       setLoading(false);
     })();
   }, [router, supabase]);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
@@ -18,20 +18,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabaseUrl =
-      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
+    let supabase;
+    try {
+      supabase = supabaseAdmin();
+    } catch (error) {
+      console.error("Lead API misconfigured:", error);
       return NextResponse.json(
-        { ok: false, error: "Server misconfigured (Supabase env missing)" },
+        { ok: false, error: "Server misconfigured. Please try again later." },
         { status: 500 }
       );
     }
-
-    const supabase = createClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false },
-    });
 
     const { error: dbError } = await supabase
       .from("leads")
@@ -56,35 +52,40 @@ export async function POST(req: Request) {
       process.env.EMAIL_FROM &&
       process.env.LEAD_NOTIFY_TO
     ) {
-      const resend = new Resend(process.env.RESEND_API_KEY);
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
 
-      await resend.emails.send({
-        from: process.env.EMAIL_FROM,
-        to: [process.env.LEAD_NOTIFY_TO],
-        subject: "New HeyMies early-access lead",
-        html: `
-          ${fullName ? `<p><strong>Name:</strong> ${escapeHtml(fullName)}</p>` : ""}
-          <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-          <p><strong>Source:</strong> ${escapeHtml(source)}</p>
-          ${tag ? `<p><strong>Tag:</strong> ${escapeHtml(tag)}</p>` : ""}
-          ${message ? `<p><strong>Message:</strong><br />${escapeHtml(message).replaceAll("\n", "<br />")}</p>` : ""}
-        `,
-      });
+        await resend.emails.send({
+          from: process.env.EMAIL_FROM,
+          to: [process.env.LEAD_NOTIFY_TO],
+          subject: "New HeyMies early-access lead",
+          html: `
+            ${fullName ? `<p><strong>Name:</strong> ${escapeHtml(fullName)}</p>` : ""}
+            <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+            <p><strong>Source:</strong> ${escapeHtml(source)}</p>
+            ${tag ? `<p><strong>Tag:</strong> ${escapeHtml(tag)}</p>` : ""}
+            ${message ? `<p><strong>Message:</strong><br />${escapeHtml(message).replaceAll("\n", "<br />")}</p>` : ""}
+          `,
+        });
 
-      await resend.emails.send({
-        from: process.env.EMAIL_FROM,
-        to: [email],
-        subject: "You're on the HeyMies early access list",
-        html: `
-          <p>Thanks${fullName ? ` ${escapeHtml(fullName.split(" ")[0])}` : ""} - we received your HeyMies request.</p>
-          <p>We'll come back to you as soon as the next test slot is ready.</p>
-          <p><strong>HeyMies</strong></p>
-        `,
-      });
+        await resend.emails.send({
+          from: process.env.EMAIL_FROM,
+          to: [email],
+          subject: "You're on the HeyMies early access list",
+          html: `
+            <p>Thanks${fullName ? ` ${escapeHtml(fullName.split(" ")[0])}` : ""} - we received your HeyMies request.</p>
+            <p>We'll come back to you as soon as the next test slot is ready.</p>
+            <p><strong>HeyMies</strong></p>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Failed to send lead notification email:", emailError);
+      }
     }
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("Lead API error:", error);
     return NextResponse.json(
       { ok: false, error: "Bad request" },
       { status: 400 }
