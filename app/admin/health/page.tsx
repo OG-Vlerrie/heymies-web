@@ -66,10 +66,10 @@ export default async function AdminHealthPage() {
     },
     {
       label: "Matching secret",
-      status: matchingSecret ? "warn" : "ok",
+      status: matchingSecret ? "ok" : "warn",
       detail: matchingSecret
-        ? "MATCHING_JOB_SECRET is set. Browser-triggered matching after listing publish may be blocked unless moved server-side or supplied by a secure admin route."
-        : "No matching secret is set, so listing publish triggers can call matching directly.",
+        ? "MATCHING_JOB_SECRET is set. Dashboard and admin matching triggers use server-side proxy routes."
+        : "No matching secret is set. Set MATCHING_JOB_SECRET before public beta.",
     },
   ];
 

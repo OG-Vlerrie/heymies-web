@@ -45,7 +45,7 @@ export default function QualityPanel({
     setResult(null);
 
     try {
-      const res = await fetch("/api/matching/run", {
+      const res = await fetch("/api/admin/matching/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ minScore: 55 }),

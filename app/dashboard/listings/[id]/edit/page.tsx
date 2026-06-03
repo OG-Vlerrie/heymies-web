@@ -510,13 +510,21 @@ export default function EditListingPage() {
       setListingStatus(nextStatus);
 
       if (nextStatus === "active") {
-        fetch("/api/matching/run", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ listingId, minScore: 55 }),
-        }).catch((matchError) => {
-          console.error("Failed to run buyer matching:", matchError);
-        });
+        const { data: sessionRes } = await supabase.auth.getSession();
+        const accessToken = sessionRes.session?.access_token;
+
+        if (accessToken) {
+          fetch("/api/listings/run-matching", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ listingId, minScore: 55 }),
+          }).catch((matchError) => {
+            console.error("Failed to run buyer matching:", matchError);
+          });
+        }
       }
 
       setSaving(false);

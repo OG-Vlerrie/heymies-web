@@ -182,12 +182,19 @@ export default async function AdminLaunchPage() {
     },
     {
       label: "Job secrets",
-      status: cronSecret || nurtureSecret || matchingSecret ? "watch" : "blocked",
+      status:
+        (cronSecret || nurtureSecret) && matchingSecret
+          ? "ready"
+          : cronSecret || nurtureSecret || matchingSecret
+            ? "watch"
+            : "blocked",
       detail:
-        cronSecret || nurtureSecret || matchingSecret
-          ? "At least one job secret is configured."
+        (cronSecret || nurtureSecret) && matchingSecret
+          ? "Nurture and matching job secrets are configured."
+          : cronSecret || nurtureSecret || matchingSecret
+          ? "Some job secrets are configured."
           : "No cron, nurture, or matching job secret is configured.",
-      action: "Set CRON_SECRET, NURTURE_JOB_SECRET, and MATCHING_JOB_SECRET before public beta.",
+      action: "Set CRON_SECRET or NURTURE_JOB_SECRET, plus MATCHING_JOB_SECRET before public beta.",
     },
   ];
 
