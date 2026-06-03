@@ -41,21 +41,6 @@ export default function ListingsPage() {
         .single<Profile>();
       if (profile?.role === "buyer") return router.push("/dashboard");
 
-      if (profile?.role === "seller" && sessionRes.session?.access_token) {
-        const draftRes = await fetch("/api/seller/draft-listing", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${sessionRes.session.access_token}`,
-          },
-        });
-        const draftData = await draftRes.json().catch(() => ({}));
-
-        if (draftRes.ok && draftData?.created && draftData?.listingId) {
-          router.replace(`/dashboard/listings/${draftData.listingId}/edit?from=seller-signup`);
-          return;
-        }
-      }
-
       const { data, error: lErr } = await supabase
   .from("listings")
   .select("id, title, price, suburb, city, status, created_at, cover_image")

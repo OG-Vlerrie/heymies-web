@@ -179,6 +179,7 @@ export default function NewListingPage() {
   // Photos
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [coverIndex, setCoverIndex] = useState(0);
 
   // Separate loading states (AI vs Create Listing)
   const [loading, setLoading] = useState(false);
@@ -212,6 +213,7 @@ export default function NewListingPage() {
       .slice(0, MAX_LISTING_IMAGES);
 
     setFiles(picked);
+    setCoverIndex(0);
 
     const nextPreviews = picked.map((f) => URL.createObjectURL(f));
     setPreviews((prev) => {
@@ -222,6 +224,11 @@ export default function NewListingPage() {
 
   function removeImage(idx: number) {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
+    setCoverIndex((current) => {
+      if (current === idx) return 0;
+      if (current > idx) return current - 1;
+      return current;
+    });
     setPreviews((prev) => {
       const copy = [...prev];
       const [removed] = copy.splice(idx, 1);
@@ -252,7 +259,7 @@ export default function NewListingPage() {
       urls.push(pub.publicUrl);
     }
 
-    return { urls, cover: urls[0] ?? null };
+    return { urls, cover: urls[coverIndex] ?? urls[0] ?? null };
   }
 
   function onGenerateDescription() {
@@ -518,10 +525,13 @@ export default function NewListingPage() {
         <div className="mt-6 grid gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           {/* Core */}
           <section className="grid gap-3">
-            <h2 className="font-semibold text-slate-900">Core</h2>
+            <h2 className="font-semibold text-slate-900">Listing basics</h2>
+            <p className="text-sm text-slate-600">
+              Start with the public category, transaction type, and a clear headline buyers can scan.
+            </p>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Sale type">
+              <Field label="Sale or rental type" help="Choose whether this property is for sale or to rent.">
                 <select
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={saleType}
@@ -535,7 +545,7 @@ export default function NewListingPage() {
                 </select>
               </Field>
 
-              <Field label="Listing type">
+              <Field label="Property type" help="Pick the closest property category for buyer filters and matching.">
                 <select
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={listingType}
@@ -550,7 +560,7 @@ export default function NewListingPage() {
               </Field>
             </div>
 
-            <Field label="Title *">
+            <Field label="Listing title *" help="Example: 3 bedroom family home in Parkhurst.">
               <input
                 className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                 value={title}
@@ -558,6 +568,7 @@ export default function NewListingPage() {
               />
             </Field>
 
+            {false ? (
             <Field label="Description">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs text-slate-500">Optional: auto-generate from fields</span>
@@ -588,21 +599,34 @@ export default function NewListingPage() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </Field>
+            ) : null}
           </section>
 
           {/* Photos */}
           <section className="grid gap-3">
             <h2 className="font-semibold text-slate-900">Photos *</h2>
+            <p className="text-sm text-slate-600">
+              Add clear photos of the exterior, main rooms, kitchen, bathrooms, and standout features.
+            </p>
 
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => onPickImages(e.target.files)}
-              className="block w-full text-sm text-slate-900"
-            />
+            <div>
+              <label
+                htmlFor="listing-photos"
+                className="inline-flex cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+              >
+                Add Photos
+              </label>
+              <input
+                id="listing-photos"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => onPickImages(e.target.files)}
+                className="sr-only"
+              />
+            </div>
 
-            <p className="text-xs text-slate-600">Up to 50 images. First image becomes the cover.</p>
+            <p className="text-xs text-slate-600">Up to 50 images. Choose one selected photo as the listing cover.</p>
 
             {previews.length > 0 && (
               <div className="grid grid-cols-3 gap-3 md:grid-cols-4">
@@ -616,11 +640,18 @@ export default function NewListingPage() {
                     >
                       Remove
                     </button>
-                    {idx === 0 && (
+                    {idx === coverIndex && (
                       <span className="absolute left-2 top-2 rounded-lg bg-emerald-700 px-2 py-1 text-xs text-white">
                         Cover
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setCoverIndex(idx)}
+                      className="absolute bottom-2 left-2 right-2 rounded-lg bg-white/90 px-2 py-1 text-xs font-semibold"
+                    >
+                      {idx === coverIndex ? "Cover photo" : "Set as cover"}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -630,9 +661,15 @@ export default function NewListingPage() {
           {/* Pricing */}
           <section className="grid gap-3">
             <h2 className="font-semibold text-slate-900">Pricing</h2>
+            <p className="text-sm text-slate-600">
+              Enter the amount buyers or tenants will see. Monthly costs help people compare homes accurately.
+            </p>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label={saleType === "sale" ? "Sale price (ZAR) *" : "Rent per month (ZAR) *"}>
+              <Field
+                label={saleType === "sale" ? "Sale price (ZAR) *" : "Rent per month (ZAR) *"}
+                help={saleType === "sale" ? "Use the asking price before any negotiation." : "Use the monthly rental amount, excluding deposit."}
+              >
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={price}
@@ -641,7 +678,7 @@ export default function NewListingPage() {
               </Field>
 
               {saleType === "rent" ? (
-                <Field label="Deposit (ZAR)">
+                <Field label="Deposit (ZAR)" help="Usually one or two months' rent. Leave blank if not set yet.">
                   <input
                     className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                     value={deposit}
@@ -653,7 +690,7 @@ export default function NewListingPage() {
               )}
 
               {saleType === "rent" ? (
-                <Field label="Available from">
+                <Field label="Available from" help="When a tenant can move in.">
                   <input
                     className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                     type="date"
@@ -665,7 +702,7 @@ export default function NewListingPage() {
                 <div />
               )}
 
-              <Field label="Levy (monthly)">
+              <Field label="Levies (monthly)" help="Monthly body corporate or HOA levies, if applicable.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={levy}
@@ -673,7 +710,7 @@ export default function NewListingPage() {
                 />
               </Field>
 
-              <Field label="Rates & Taxes (monthly)">
+              <Field label="Rates and taxes (monthly)" help="Municipal rates and taxes, if known.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={ratesTaxes}
@@ -691,9 +728,12 @@ export default function NewListingPage() {
           {/* Property details */}
           <section className="grid gap-3">
             <h2 className="text-lg font-semibold text-slate-900">Property details</h2>
+            <p className="text-sm text-slate-600">
+              Add the practical specs buyers use to shortlist and compare properties.
+            </p>
 
             <div className="grid gap-3 md:grid-cols-5">
-              <Field label="Bedrooms">
+              <Field label="Bedrooms" help="Use 0 for studio, bachelor, land, or commercial listings.">
                 <select
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={bedrooms}
@@ -708,7 +748,7 @@ export default function NewListingPage() {
                 </select>
               </Field>
 
-              <Field label="Bathrooms">
+              <Field label="Bathrooms" help="Half bathrooms can be selected where relevant.">
                 <select
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={bathrooms}
@@ -723,7 +763,7 @@ export default function NewListingPage() {
                 </select>
               </Field>
 
-              <Field label="Garages">
+              <Field label="Garages" help="Covered lock-up garages only.">
                 <select
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={garages}
@@ -738,7 +778,7 @@ export default function NewListingPage() {
                 </select>
               </Field>
 
-              <Field label="Parking">
+              <Field label="Open parking bays" help="Carports, driveway spaces, or open bays.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={parking}
@@ -774,6 +814,9 @@ export default function NewListingPage() {
           {/* Features */}
           <section className="grid gap-3">
             <h2 className="font-semibold text-slate-900">Features</h2>
+            <p className="text-sm text-slate-600">
+              Select the standout features that should appear in matching and the generated description.
+            </p>
             <div className="flex flex-wrap gap-2">
               {FEATURE_OPTIONS.map((f) => {
                 const active = features.includes(f);
@@ -798,8 +841,11 @@ export default function NewListingPage() {
           {/* Location */}
           <section className="grid gap-3">
             <h2 className="font-semibold text-slate-900">Location</h2>
+            <p className="text-sm text-slate-600">
+              Suburb, city, and province are public. Street address can stay private until enquiry if needed.
+            </p>
 
-            <Field label="Street address">
+            <Field label="Street address" help="Optional, but useful for accurate internal records.">
               <input
                 className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                 value={streetAddress}
@@ -808,7 +854,7 @@ export default function NewListingPage() {
             </Field>
 
             <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Suburb *">
+              <Field label="Suburb or area *" help="Example: Sandton, Parkhurst, Umhlanga.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={suburb}
@@ -816,7 +862,7 @@ export default function NewListingPage() {
                 />
               </Field>
 
-              <Field label="City *">
+              <Field label="City *" help="Example: Johannesburg, Cape Town, Durban.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={city}
@@ -824,7 +870,7 @@ export default function NewListingPage() {
                 />
               </Field>
 
-              <Field label="Province *">
+              <Field label="Province *" help="Use the South African province name.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={province}
@@ -834,7 +880,7 @@ export default function NewListingPage() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Postal code">
+              <Field label="Postal code" help="Optional.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={postalCode}
@@ -842,7 +888,7 @@ export default function NewListingPage() {
                 />
               </Field>
 
-              <Field label="Latitude (optional)">
+              <Field label="Latitude (optional)" help="Only needed if you already have exact map coordinates.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={lat}
@@ -850,7 +896,7 @@ export default function NewListingPage() {
                 />
               </Field>
 
-              <Field label="Longitude (optional)">
+              <Field label="Longitude (optional)" help="Only needed if you already have exact map coordinates.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={lng}
@@ -863,8 +909,11 @@ export default function NewListingPage() {
           {/* Contact */}
           <section className="grid gap-3">
             <h2 className="font-semibold text-slate-900">Contact (optional)</h2>
+            <p className="text-sm text-slate-600">
+              Add the person buyers or agents should contact about this listing. Leave blank to use account details later.
+            </p>
             <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Contact name">
+              <Field label="Contact name" help="The public or handover contact for this listing.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={contactName}
@@ -872,7 +921,7 @@ export default function NewListingPage() {
                 />
               </Field>
 
-              <Field label="Contact phone">
+              <Field label="Contact phone" help="Use a WhatsApp-friendly number if possible.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={contactPhone}
@@ -880,7 +929,7 @@ export default function NewListingPage() {
                 />
               </Field>
 
-              <Field label="Contact email">
+              <Field label="Contact email" help="Enquiry notifications can use this address.">
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
                   value={contactEmail}
@@ -888,6 +937,45 @@ export default function NewListingPage() {
                 />
               </Field>
             </div>
+          </section>
+
+          {/* Description */}
+          <section className="grid gap-3 border-t border-slate-200 pt-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="font-semibold text-slate-900">Listing description</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Write the public description last, once the facts above are complete.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={onGenerateDescription}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+                >
+                  Generate template
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onGenerateDescriptionAI}
+                  className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? "Generating..." : "Generate with AI"}
+                </button>
+              </div>
+            </div>
+
+            <Field label="Description" help="Include layout, condition, standout features, access, and anything buyers should know before enquiring.">
+              <textarea
+                className="min-h-[160px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </Field>
           </section>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
@@ -907,10 +995,19 @@ export default function NewListingPage() {
 
 /* ---------------------------- Components --------------------------- */
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  help,
+  children,
+}: {
+  label: string;
+  help?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="grid gap-1">
       <span className="text-sm font-medium text-slate-700">{label}</span>
+      {help ? <span className="text-xs text-slate-500">{help}</span> : null}
       {children}
     </label>
   );

@@ -2,103 +2,30 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
+import { clearSignupDraft, loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
-  // Auth
   email: string;
   password: string;
   confirm: string;
-
-  // Personal
   full_name: string;
   phone: string;
   preferred_contact: string;
-
-  // Property basics
-  intent: string;
-  property_type: string;
-  province: string;
-  city: string;
-  suburb: string;
-  street_address: string;
-
-  bedrooms: string;
-  bathrooms: string;
-  parking: string;
-  floor_size_m2: string;
-  erf_size_m2: string;
-
-  // Pricing + timing
-  asking_price: string;
-  price_flexibility: string;
-  target_timeframe: string;
-
-  // Status + costs
-  bond_status: string;
-  rates_taxes_known: boolean;
-  rates_taxes_amount: string;
-  levies_known: boolean;
-  levies_amount: string;
-
-  // Access + occupancy
-  reason_for_selling: string;
-  access_for_viewings: string;
-  occupancy: string;
-  available_from: string; // yyyy-mm-dd
-
-  // Extra
-  special_features: string;
-  notes: string;
-
-  // Consent
   popia_consent: boolean;
 };
 
-const STEPS = ["Account", "You", "Property", "Pricing", "Details", "Consent"];
+const STEPS = ["Account", "Contact", "Consent"] as const;
 const DRAFT_KEY = "heymies_signup_draft_private_seller";
+const ADD_LISTING_PATH = "/dashboard/listings/new";
 
 const INITIAL_FORM: FormState = {
   email: "",
   password: "",
   confirm: "",
-
   full_name: "",
   phone: "",
   preferred_contact: "WhatsApp",
-
-  intent: "Sell",
-  property_type: "",
-  province: "",
-  city: "",
-  suburb: "",
-  street_address: "",
-
-  bedrooms: "",
-  bathrooms: "",
-  parking: "",
-  floor_size_m2: "",
-  erf_size_m2: "",
-
-  asking_price: "",
-  price_flexibility: "Negotiable",
-  target_timeframe: "",
-
-  bond_status: "",
-  rates_taxes_known: false,
-  rates_taxes_amount: "",
-  levies_known: false,
-  levies_amount: "",
-
-  reason_for_selling: "",
-  access_for_viewings: "",
-  occupancy: "",
-  available_from: "",
-
-  special_features: "",
-  notes: "",
-
   popia_consent: false,
 };
 
@@ -109,78 +36,39 @@ export default function PrivateSellerSignupPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [form, setForm] = useState<FormState>(() =>
-    loadSignupDraft(DRAFT_KEY, INITIAL_FORM)
-  );
+  const [form, setForm] = useState<FormState>(() => loadSignupDraft(DRAFT_KEY, INITIAL_FORM));
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((p) => ({ ...p, [key]: value }));
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   useEffect(() => {
     saveSignupDraft(DRAFT_KEY, form);
   }, [form]);
 
-  function sanitizePhone(v: string) {
-    return v.replace(/[^\d+]/g, "");
-  }
-
-  function asIntOrNull(v: string): number | null {
-    const t = v.trim();
-    if (!t) return null;
-    const n = Number(t);
-    return Number.isFinite(n) ? Math.trunc(n) : null;
-  }
-
-  function asNumOrNull(v: string): number | null {
-    const t = v.trim();
-    if (!t) return null;
-    const n = Number(t);
-    return Number.isFinite(n) ? n : null;
+  function sanitizePhone(value: string) {
+    return value.replace(/[^\d+]/g, "");
   }
 
   function confirmationRedirect() {
-    return `${window.location.origin}/login?next=${encodeURIComponent("/dashboard/listings")}`;
+    return `${window.location.origin}/login?next=${encodeURIComponent(ADD_LISTING_PATH)}`;
   }
 
-  function validateStep(s: number): string | null {
-    if (s === 0) {
+  function validateStep(currentStep: number) {
+    if (currentStep === 0) {
       if (!form.email.includes("@")) return "Enter a valid email.";
       if (form.password.length < 6) return "Password must be at least 6 characters.";
       if (form.password !== form.confirm) return "Passwords do not match.";
-      return null;
     }
 
-    if (s === 1) {
+    if (currentStep === 1) {
       if (form.full_name.trim().length < 2) return "Enter your full name.";
       if (sanitizePhone(form.phone).length < 9) return "Enter a valid phone number.";
-      return null;
+      if (!form.preferred_contact) return "Choose a preferred contact method.";
     }
 
-    if (s === 2) {
-      if (!form.property_type) return "Select a property type.";
-      if (form.city.trim().length < 2) return "Enter your city.";
-      if (form.suburb.trim().length < 2) return "Enter your suburb/area.";
-      return null;
-    }
-
-    if (s === 3) {
-      if (form.asking_price.trim().length === 0) return "Enter an asking price (or a rough estimate).";
-      if (!form.target_timeframe) return "Select your target timeframe.";
-      return null;
-    }
-
-    if (s === 4) {
-      if (!form.bond_status) return "Select your bond status.";
-      if (!form.access_for_viewings) return "Select viewing access.";
-      if (!form.occupancy) return "Select occupancy.";
-      return null;
-    }
-
-    if (s === 5) {
-      if (!form.popia_consent) return "You must accept POPIA consent to continue.";
-      return null;
+    if (currentStep === 2 && !form.popia_consent) {
+      return "You must accept POPIA consent to continue.";
     }
 
     return null;
@@ -188,67 +76,36 @@ export default function PrivateSellerSignupPage() {
 
   function next() {
     setError(null);
-    const msg = validateStep(step);
-    if (msg) return setError(msg);
-    setStep((v) => Math.min(STEPS.length - 1, v + 1));
+    const message = validateStep(step);
+    if (message) return setError(message);
+    setStep((prev) => Math.min(STEPS.length - 1, prev + 1));
   }
 
   function back() {
     setError(null);
-    setStep((v) => Math.max(0, v - 1));
+    setStep((prev) => Math.max(0, prev - 1));
   }
 
   async function submit() {
     setError(null);
 
-    for (let s = 0; s < STEPS.length; s++) {
-      const msg = validateStep(s);
-      if (msg) {
-        setStep(s);
-        setError(msg);
+    for (let currentStep = 0; currentStep < STEPS.length; currentStep += 1) {
+      const message = validateStep(currentStep);
+      if (message) {
+        setStep(currentStep);
+        setError(message);
         return;
       }
     }
 
     setLoading(true);
+
     try {
       const payload = {
         role: "seller",
         full_name: form.full_name.trim(),
         phone: sanitizePhone(form.phone),
         preferred_contact: form.preferred_contact,
-
-        intent: form.intent,
-        property_type: form.property_type,
-        province: form.province.trim() || null,
-        city: form.city.trim() || null,
-        suburb: form.suburb.trim() || null,
-        street_address: form.street_address.trim() || null,
-
-        bedrooms: asIntOrNull(form.bedrooms),
-        bathrooms: asIntOrNull(form.bathrooms),
-        parking: asIntOrNull(form.parking),
-        floor_size_m2: asNumOrNull(form.floor_size_m2),
-        erf_size_m2: asNumOrNull(form.erf_size_m2),
-
-        asking_price: asNumOrNull(form.asking_price),
-        price_flexibility: form.price_flexibility || null,
-        target_timeframe: form.target_timeframe || null,
-
-        bond_status: form.bond_status || null,
-        rates_taxes_known: form.rates_taxes_known,
-        rates_taxes_amount: form.rates_taxes_known ? asNumOrNull(form.rates_taxes_amount) : null,
-        levies_known: form.levies_known,
-        levies_amount: form.levies_known ? asNumOrNull(form.levies_amount) : null,
-
-        reason_for_selling: form.reason_for_selling.trim() || null,
-        access_for_viewings: form.access_for_viewings || null,
-        occupancy: form.occupancy || null,
-        available_from: form.available_from || null,
-
-        special_features: form.special_features.trim() || null,
-        notes: form.notes.trim() || null,
-
         popia_consent: form.popia_consent,
       };
 
@@ -263,10 +120,12 @@ export default function PrivateSellerSignupPage() {
 
       if (signUpError) throw new Error(signUpError.message);
 
+      clearSignupDraft([DRAFT_KEY]);
+
       router.push(
         `/signup/check-email?role=seller&email=${encodeURIComponent(
           form.email.trim()
-        )}&next=${encodeURIComponent("/dashboard/listings")}`
+        )}&next=${encodeURIComponent(ADD_LISTING_PATH)}`
       );
     } catch (e: any) {
       setError(e?.message ?? "Something went wrong.");
@@ -281,7 +140,9 @@ export default function PrivateSellerSignupPage() {
     <main className="tech-page text-slate-900">
       <div className="mx-auto max-w-2xl px-4 py-12">
         <h1 className="text-3xl font-semibold">Private Seller Signup</h1>
-        <p className="mt-2 text-slate-600">List smarter. Get qualified buyers. Stay in control.</p>
+        <p className="mt-2 text-slate-600">
+          Create your seller account first. You will add property details after email confirmation.
+        </p>
 
         <div className="mt-8">
           <div className="flex items-center justify-between text-sm text-slate-600">
@@ -297,15 +158,16 @@ export default function PrivateSellerSignupPage() {
         </div>
 
         <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          {step === 0 && (
+          {step === 0 ? (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Account</h2>
 
-              <Field label="Email">
+              <Field label="Email address">
                 <input
                   className="w-full rounded-xl border border-slate-200 px-4 py-3"
                   value={form.email}
                   onChange={(e) => setField("email", e.target.value)}
+                  placeholder="you@email.com"
                 />
               </Field>
 
@@ -316,6 +178,7 @@ export default function PrivateSellerSignupPage() {
                     className="w-full rounded-xl border border-slate-200 px-4 py-3"
                     value={form.password}
                     onChange={(e) => setField("password", e.target.value)}
+                    placeholder="Min 6 characters"
                   />
                 </Field>
 
@@ -329,26 +192,27 @@ export default function PrivateSellerSignupPage() {
                 </Field>
               </div>
             </div>
-          )}
+          ) : null}
 
-          {step === 1 && (
+          {step === 1 ? (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Your details</h2>
+              <h2 className="text-xl font-semibold">Contact details</h2>
 
               <Field label="Full name">
                 <input
                   className="w-full rounded-xl border border-slate-200 px-4 py-3"
                   value={form.full_name}
                   onChange={(e) => setField("full_name", e.target.value)}
+                  placeholder="e.g. John Smith"
                 />
               </Field>
 
-              <Field label="Phone (WhatsApp-friendly)">
+              <Field label="Phone number">
                 <input
                   className="w-full rounded-xl border border-slate-200 px-4 py-3"
                   value={form.phone}
                   onChange={(e) => setField("phone", e.target.value)}
-                  placeholder="+27..."
+                  placeholder="e.g. +27..."
                 />
               </Field>
 
@@ -364,297 +228,9 @@ export default function PrivateSellerSignupPage() {
                 </select>
               </Field>
             </div>
-          )}
+          ) : null}
 
-          {step === 2 && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Property</h2>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Intent">
-                  <select
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.intent}
-                    onChange={(e) => setField("intent", e.target.value)}
-                  >
-                    <option value="Sell">Sell</option>
-                    <option value="Rent">Rent</option>
-                  </select>
-                </Field>
-
-                <Field label="Property type">
-                  <select
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.property_type}
-                    onChange={(e) => setField("property_type", e.target.value)}
-                  >
-                    <option value="">Select…</option>
-                    <option value="House">House</option>
-                    <option value="Apartment">Apartment</option>
-                    <option value="Townhouse">Townhouse</option>
-                    <option value="Land">Land</option>
-                  </select>
-                </Field>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Province (optional)">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.province}
-                    onChange={(e) => setField("province", e.target.value)}
-                  />
-                </Field>
-
-                <Field label="City">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.city}
-                    onChange={(e) => setField("city", e.target.value)}
-                  />
-                </Field>
-              </div>
-
-              <Field label="Suburb / Area">
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.suburb}
-                  onChange={(e) => setField("suburb", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Street address (optional)">
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.street_address}
-                  onChange={(e) => setField("street_address", e.target.value)}
-                />
-              </Field>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Bedrooms (optional)">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.bedrooms}
-                    onChange={(e) => setField("bedrooms", e.target.value)}
-                    inputMode="numeric"
-                  />
-                </Field>
-
-                <Field label="Bathrooms (optional)">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.bathrooms}
-                    onChange={(e) => setField("bathrooms", e.target.value)}
-                    inputMode="numeric"
-                  />
-                </Field>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <Field label="Parking (optional)">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.parking}
-                    onChange={(e) => setField("parking", e.target.value)}
-                    inputMode="numeric"
-                  />
-                </Field>
-
-                <Field label="Floor size m² (optional)">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.floor_size_m2}
-                    onChange={(e) => setField("floor_size_m2", e.target.value)}
-                    inputMode="decimal"
-                  />
-                </Field>
-
-                <Field label="Erf size m² (optional)">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.erf_size_m2}
-                    onChange={(e) => setField("erf_size_m2", e.target.value)}
-                    inputMode="decimal"
-                  />
-                </Field>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Pricing</h2>
-
-              <Field label="Asking price (ZAR)">
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.asking_price}
-                  onChange={(e) => setField("asking_price", e.target.value)}
-                  placeholder="e.g. 2500000"
-                  inputMode="numeric"
-                />
-              </Field>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Price flexibility">
-                  <select
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.price_flexibility}
-                    onChange={(e) => setField("price_flexibility", e.target.value)}
-                  >
-                    <option value="Firm">Firm</option>
-                    <option value="Negotiable">Negotiable</option>
-                    <option value="Unsure">Unsure</option>
-                  </select>
-                </Field>
-
-                <Field label="Target timeframe">
-                  <select
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.target_timeframe}
-                    onChange={(e) => setField("target_timeframe", e.target.value)}
-                  >
-                    <option value="">Select…</option>
-                    <option value="ASAP">ASAP</option>
-                    <option value="1-3 months">1–3 months</option>
-                    <option value="3-6 months">3–6 months</option>
-                    <option value="6+ months">6+ months</option>
-                    <option value="Browsing">Browsing</option>
-                  </select>
-                </Field>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Details</h2>
-
-              <Field label="Bond status">
-                <select
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.bond_status}
-                  onChange={(e) => setField("bond_status", e.target.value)}
-                >
-                  <option value="">Select…</option>
-                  <option value="No bond">No bond</option>
-                  <option value="Bonded">Bonded</option>
-                  <option value="Not sure">Not sure</option>
-                </select>
-              </Field>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4">
-                  <input
-                    type="checkbox"
-                    checked={form.rates_taxes_known}
-                    onChange={(e) => setField("rates_taxes_known", e.target.checked)}
-                  />
-                  <span className="text-sm text-slate-700">I know my rates & taxes</span>
-                </label>
-
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4">
-                  <input
-                    type="checkbox"
-                    checked={form.levies_known}
-                    onChange={(e) => setField("levies_known", e.target.checked)}
-                  />
-                  <span className="text-sm text-slate-700">I pay levies</span>
-                </label>
-              </div>
-
-              {form.rates_taxes_known && (
-                <Field label="Rates & taxes amount (monthly)">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.rates_taxes_amount}
-                    onChange={(e) => setField("rates_taxes_amount", e.target.value)}
-                    inputMode="decimal"
-                  />
-                </Field>
-              )}
-
-              {form.levies_known && (
-                <Field label="Levies amount (monthly)">
-                  <input
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.levies_amount}
-                    onChange={(e) => setField("levies_amount", e.target.value)}
-                    inputMode="decimal"
-                  />
-                </Field>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Access for viewings">
-                  <select
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.access_for_viewings}
-                    onChange={(e) => setField("access_for_viewings", e.target.value)}
-                  >
-                    <option value="">Select…</option>
-                    <option value="Weekdays">Weekdays</option>
-                    <option value="Weekends">Weekends</option>
-                    <option value="Any">Any</option>
-                    <option value="By appointment">By appointment</option>
-                  </select>
-                </Field>
-
-                <Field label="Occupancy">
-                  <select
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                    value={form.occupancy}
-                    onChange={(e) => setField("occupancy", e.target.value)}
-                  >
-                    <option value="">Select…</option>
-                    <option value="Vacant">Vacant</option>
-                    <option value="Owner occupied">Owner occupied</option>
-                    <option value="Tenant occupied">Tenant occupied</option>
-                  </select>
-                </Field>
-              </div>
-
-              <Field label="Available from (optional)">
-                <input
-                  type="date"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.available_from}
-                  onChange={(e) => setField("available_from", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Reason for selling (optional)">
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.reason_for_selling}
-                  onChange={(e) => setField("reason_for_selling", e.target.value)}
-                  placeholder="e.g. Relocating"
-                />
-              </Field>
-
-              <Field label="Special features (optional)">
-                <input
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.special_features}
-                  onChange={(e) => setField("special_features", e.target.value)}
-                  placeholder="e.g. Pool, solar, cottage"
-                />
-              </Field>
-
-              <Field label="Notes (optional)">
-                <textarea
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3"
-                  value={form.notes}
-                  onChange={(e) => setField("notes", e.target.value)}
-                  rows={4}
-                  placeholder="Anything else that helps qualify your listing"
-                />
-              </Field>
-            </div>
-          )}
-
-          {step === 5 && (
+          {step === 2 ? (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Consent</h2>
 
@@ -666,18 +242,19 @@ export default function PrivateSellerSignupPage() {
                   onChange={(e) => setField("popia_consent", e.target.checked)}
                 />
                 <span className="text-sm text-slate-700">
-                  I consent to HeyMies processing my information to help list my property and connect me with verified
-                  buyers/agents, in line with POPIA.
+                  I consent to HeyMies processing my information to create my seller account,
+                  help me publish listings, and connect me with verified buyers or agents, in
+                  line with POPIA.
                 </span>
               </label>
             </div>
-          )}
+          ) : null}
 
-          {error && (
+          {error ? (
             <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {error}
             </div>
-          )}
+          ) : null}
 
           <div className="mt-8 flex items-center justify-between">
             <button
@@ -713,7 +290,7 @@ export default function PrivateSellerSignupPage() {
 
         <p className="mt-6 text-sm text-slate-600">
           Already have an account?{" "}
-          <a className="text-emerald-700 underline" href="/login?role=seller">
+          <a className="text-emerald-700 underline" href={`/login?role=seller&next=${encodeURIComponent(ADD_LISTING_PATH)}`}>
             Log in
           </a>
         </p>
