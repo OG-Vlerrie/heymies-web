@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DemoRequestForm from "./DemoRequestForm";
 import {
   TechCard,
   TechFooter,
@@ -42,7 +43,7 @@ export default function HomePage() {
         eyebrow="Lead intelligence for real estate"
         title="HeyMies turns property enquiries into ready-to-buy conversations."
         subtitle="Mia qualifies buyers, follows up automatically, sends better matches, and hands over cleaner leads to agents and sellers when the timing is right."
-        primary={{ href: "/signup", label: "Start with HeyMies" }}
+        primary={{ href: "#agency-demo", label: "Request demo" }}
         secondary={{ href: "/how-it-works", label: "See the engine" }}
         graphic="pipeline"
       />
@@ -98,6 +99,51 @@ export default function HomePage() {
               <p className="mt-2 text-sm leading-6 text-slate-700">{body}</p>
             </TechCard>
           ))}
+        </div>
+      </TechSection>
+
+      <TechSection title="Book a demo for your agency">
+        <div
+          id="agency-demo"
+          className="grid scroll-mt-24 gap-8 lg:grid-cols-[1fr_0.86fr] lg:items-start"
+        >
+          <div>
+            <p className="tech-kicker">Agency fit check</p>
+            <h2 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight text-slate-950">
+              See how HeyMies can qualify, nurture, and hand over cleaner property
+              leads for your team.
+            </h2>
+            <p className="mt-4 max-w-2xl leading-7 text-slate-700">
+              Tell us a little about your agency and what you want to improve. We will
+              use that context to shape the demo around your lead flow, buyer
+              readiness, and handover process.
+            </p>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <TechCard>
+                <p className="text-sm font-semibold text-slate-600">Demo focus</p>
+                <p className="mt-2 text-lg font-semibold text-slate-950">
+                  Your workflow
+                </p>
+              </TechCard>
+              <TechCard>
+                <p className="text-sm font-semibold text-slate-600">Best for</p>
+                <p className="mt-2 text-lg font-semibold text-slate-950">
+                  Agency teams
+                </p>
+              </TechCard>
+              <TechCard>
+                <p className="text-sm font-semibold text-slate-600">Next step</p>
+                <p className="mt-2 text-lg font-semibold text-slate-950">
+                  Fit call
+                </p>
+              </TechCard>
+            </div>
+          </div>
+
+          <TechCard>
+            <DemoRequestForm />
+          </TechCard>
         </div>
       </TechSection>
 

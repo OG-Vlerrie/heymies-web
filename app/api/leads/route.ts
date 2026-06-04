@@ -33,16 +33,11 @@ export async function POST(req: Request) {
       });
     }
 
-    const { error: dbError } = await supabase
-      .from("leads")
-      .upsert(
-        {
-          email,
-          source,
-          tag: tag || (source.includes("contact") ? "contact" : null),
-        },
-        { onConflict: "email" }
-      );
+    const dbError = await saveLead(supabase, {
+      email,
+      source,
+      tag: tag || (source.includes("contact") ? "contact" : null),
+    });
 
     if (dbError) {
       await logApiError({
@@ -52,10 +47,13 @@ export async function POST(req: Request) {
         error: dbError,
         metadata: { email, source },
       });
-      return NextResponse.json(
-        { ok: false, error: "DB error" },
-        { status: 500 }
-      );
+
+      if (!canContinueWithoutLeadStorage(dbError)) {
+        return NextResponse.json(
+          { ok: false, error: "DB error" },
+          { status: 500 }
+        );
+      }
     }
 
     if (
@@ -66,10 +64,24 @@ export async function POST(req: Request) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
 
+        const isDemoRequest = tag === "demo" || source.includes("demo");
+        const adminSubject = isDemoRequest
+          ? "New HeyMies demo request"
+          : "New HeyMies early-access lead";
+        const replySubject = isDemoRequest
+          ? "We received your HeyMies demo request"
+          : "You're on the HeyMies early access list";
+        const replyIntro = isDemoRequest
+          ? "we received your HeyMies demo request"
+          : "we received your HeyMies request";
+        const replyNext = isDemoRequest
+          ? "We'll come back to you soon with a useful next step."
+          : "We'll come back to you as soon as the next test slot is ready.";
+
         await resend.emails.send({
           from: process.env.EMAIL_FROM,
           to: [process.env.LEAD_NOTIFY_TO],
-          subject: "New HeyMies early-access lead",
+          subject: adminSubject,
           html: `
             ${fullName ? `<p><strong>Name:</strong> ${escapeHtml(fullName)}</p>` : ""}
             <p><strong>Email:</strong> ${escapeHtml(email)}</p>
@@ -82,10 +94,10 @@ export async function POST(req: Request) {
         await resend.emails.send({
           from: process.env.EMAIL_FROM,
           to: [email],
-          subject: "You're on the HeyMies early access list",
+          subject: replySubject,
           html: `
-            <p>Thanks${fullName ? ` ${escapeHtml(fullName.split(" ")[0])}` : ""} - we received your HeyMies request.</p>
-            <p>We'll come back to you as soon as the next test slot is ready.</p>
+            <p>Thanks${fullName ? ` ${escapeHtml(fullName.split(" ")[0])}` : ""} - ${replyIntro}.</p>
+            <p>${replyNext}</p>
             <p><strong>HeyMies</strong></p>
           `,
         });
@@ -121,4 +133,66 @@ function escapeHtml(input: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+async function saveLead(
+  supabase: ReturnType<typeof supabaseAdmin>,
+  lead: { email: string; source: string; tag: string | null }
+) {
+  const upsertResult = await writeLead(supabase, lead, "upsert");
+  if (!upsertResult.error) return null;
+
+  if (isMissingEmailConflict(upsertResult.error)) {
+    const insertResult = await writeLead(supabase, lead, "insert");
+    return insertResult.error ?? null;
+  }
+
+  return upsertResult.error;
+}
+
+async function writeLead(
+  supabase: ReturnType<typeof supabaseAdmin>,
+  lead: { email: string; source: string; tag: string | null },
+  mode: "insert" | "upsert"
+) {
+  const row =
+    lead.tag === null
+      ? { email: lead.email, source: lead.source }
+      : { email: lead.email, source: lead.source, tag: lead.tag };
+  const result =
+    mode === "upsert"
+      ? await supabase.from("leads").upsert(row, { onConflict: "email" })
+      : await supabase.from("leads").insert(row);
+
+  if (!isMissingTagColumn(result.error)) return result;
+
+  const rowWithoutTag = { email: lead.email, source: lead.source };
+  return mode === "upsert"
+    ? await supabase.from("leads").upsert(rowWithoutTag, { onConflict: "email" })
+    : await supabase.from("leads").insert(rowWithoutTag);
+}
+
+function isMissingTagColumn(error: { code?: string; message?: string } | null) {
+  return (
+    error?.code === "PGRST204" &&
+    error.message?.includes("'tag' column") &&
+    error.message?.includes("'leads'")
+  );
+}
+
+function isMissingEmailConflict(error: { code?: string; message?: string } | null) {
+  return (
+    error?.code === "42P10" &&
+    error.message?.includes("ON CONFLICT")
+  );
+}
+
+function canContinueWithoutLeadStorage(error: { code?: string; message?: string } | null) {
+  return (
+    isMissingTagColumn(error) ||
+    isMissingEmailConflict(error) ||
+    (error?.code === "23502" &&
+      error.message?.includes("agent_id") &&
+      error.message?.includes("leads"))
+  );
 }
