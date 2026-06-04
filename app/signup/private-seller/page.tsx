@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { clearSignupDraft, loadSignupDraft, saveSignupDraft } from "@/lib/signup-drafts";
+import {
+  clearSignupDraft,
+  getSignupDraftSessionId,
+  loadSignupDraftFromKeys,
+  saveSignupDraft,
+} from "@/lib/signup-drafts";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
@@ -33,18 +38,41 @@ export default function PrivateSellerSignupPage() {
   const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
 
-  const [step, setStep] = useState(0);
+  const [draftSessionId] = useState(() => getSignupDraftSessionId("seller"));
+  const [step, setStep] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    const saved = window.localStorage.getItem(`${DRAFT_KEY}:step:${getSignupDraftSessionId("seller")}`);
+    const parsed = saved ? Number(saved) : 0;
+    return Number.isInteger(parsed) ? Math.max(0, Math.min(STEPS.length - 1, parsed)) : 0;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(() => loadSignupDraft(DRAFT_KEY, INITIAL_FORM));
+  const [form, setForm] = useState<FormState>(() =>
+    loadSignupDraftFromKeys(
+      [DRAFT_KEY, `${DRAFT_KEY}:session:${getSignupDraftSessionId("seller")}`],
+      INITIAL_FORM
+    )
+  );
+
+  const draftKeys = useMemo(() => {
+    const keys = [DRAFT_KEY, `${DRAFT_KEY}:session:${draftSessionId}`];
+    const email = form.email.trim().toLowerCase();
+    if (email) keys.push(`${DRAFT_KEY}:email:${email}`);
+    return keys;
+  }, [draftSessionId, form.email]);
 
   function setField<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   useEffect(() => {
-    saveSignupDraft(DRAFT_KEY, form);
-  }, [form]);
+    draftKeys.forEach((key) => saveSignupDraft(key, form));
+  }, [draftKeys, form]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(`${DRAFT_KEY}:step:${draftSessionId}`, String(step));
+  }, [draftSessionId, step]);
 
   function sanitizePhone(value: string) {
     return value.replace(/[^\d+]/g, "");
@@ -120,7 +148,7 @@ export default function PrivateSellerSignupPage() {
 
       if (signUpError) throw new Error(signUpError.message);
 
-      clearSignupDraft([DRAFT_KEY]);
+      clearSignupDraft([...draftKeys, `${DRAFT_KEY}:step:${draftSessionId}`]);
 
       router.push(
         `/signup/check-email?role=seller&email=${encodeURIComponent(

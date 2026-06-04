@@ -9,7 +9,8 @@ export default function LoginClient() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next");
-  const registerHref = next ? `/signup?next=${encodeURIComponent(next)}` : "/signup";
+  const safeNext = safeRedirectPath(next);
+  const registerHref = safeNext ? `/signup?next=${encodeURIComponent(safeNext)}` : "/signup";
   const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [email, setEmail] = useState("");
@@ -22,7 +23,7 @@ export default function LoginClient() {
     setLoading(true);
 
     const { data: loginData, error: authErr } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
 
@@ -47,12 +48,13 @@ export default function LoginClient() {
       typeof window !== "undefined"
         ? localStorage.getItem("auth_redirect_after_verify")
         : null;
+    const safeFallbackNext = safeRedirectPath(fallbackNext);
 
     if (fallbackNext) {
       localStorage.removeItem("auth_redirect_after_verify");
     }
 
-    router.push(next || fallbackNext || "/dashboard");
+    router.push(safeNext || safeFallbackNext || "/dashboard");
   }
 
   return (
@@ -109,4 +111,17 @@ export default function LoginClient() {
       </div>
     </main>
   );
+}
+
+function safeRedirectPath(value: string | null) {
+  if (!value) return null;
+
+  try {
+    const decoded = decodeURIComponent(value);
+    if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
+    if (decoded.includes("\\") || decoded.includes("\n") || decoded.includes("\r")) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
 }

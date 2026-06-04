@@ -1,7 +1,13 @@
 import { TechCard, TechHero } from "@/components/TechPage";
 import Link from "next/link";
 
-export default function SignupChooseRolePage() {
+export default function SignupChooseRolePage({
+  searchParams,
+}: {
+  searchParams?: { next?: string };
+}) {
+  const next = safeRedirectPath(searchParams?.next ?? null);
+
   return (
     <main className="tech-page">
       <TechHero
@@ -16,19 +22,19 @@ export default function SignupChooseRolePage() {
           <ChoiceCard
             title="Agent"
             desc="Get qualified buyers only. Less admin, more closing."
-            href="/signup/agent"
+            href={withNext("/signup/agent", next)}
             cta="Continue as agent"
           />
           <ChoiceCard
             title="Private Seller"
             desc="List your property and attract serious buyers, not noise."
-            href="/signup/private-seller"
+            href={withNext("/signup/private-seller", next)}
             cta="Continue as seller"
           />
           <ChoiceCard
             title="Buyer"
             desc="Get matched and guided until you're ready to view and buy."
-            href="/signup/buyer"
+            href={withNext("/signup/buyer", next)}
             cta="Continue as buyer"
           />
         </div>
@@ -42,6 +48,23 @@ export default function SignupChooseRolePage() {
       </section>
     </main>
   );
+}
+
+function withNext(path: string, next: string | null) {
+  return next ? `${path}?next=${encodeURIComponent(next)}` : path;
+}
+
+function safeRedirectPath(value: string | null) {
+  if (!value) return null;
+
+  try {
+    const decoded = decodeURIComponent(value);
+    if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
+    if (decoded.includes("\\") || decoded.includes("\n") || decoded.includes("\r")) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
 }
 
 function ChoiceCard({

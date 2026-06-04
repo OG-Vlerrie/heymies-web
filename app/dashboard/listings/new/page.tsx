@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getListingQuality } from "@/lib/listing-quality";
@@ -8,6 +8,7 @@ import { getListingQuality } from "@/lib/listing-quality";
 const LISTING_TYPES = ["house", "apartment", "townhouse", "duplex", "cluster", "land", "commercial"] as const;
 const SALE_TYPES = ["sale", "rent"] as const;
 const MAX_LISTING_IMAGES = 50;
+const LISTING_DRAFT_KEY = "heymies_listing_draft_new";
 
 const FEATURE_OPTIONS = [
   "pool",
@@ -26,6 +27,115 @@ const FEATURE_OPTIONS = [
   "braai",
   "gym",
 ] as const;
+
+type ListingDraftState = {
+  saleType: (typeof SALE_TYPES)[number];
+  listingType: (typeof LISTING_TYPES)[number];
+  title: string;
+  description: string;
+  price: string;
+  deposit: string;
+  availableFrom: string;
+  levy: string;
+  ratesTaxes: string;
+  bedrooms: string;
+  bathrooms: string;
+  garages: string;
+  parking: string;
+  floorSize: string;
+  erfSize: string;
+  petsAllowed: boolean;
+  furnished: boolean;
+  streetAddress: string;
+  suburb: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  lat: string;
+  lng: string;
+  features: string[];
+  contactName: string;
+  contactPhone: string;
+  contactEmail: string;
+  coverIndex: number;
+};
+
+const INITIAL_LISTING_DRAFT: ListingDraftState = {
+  saleType: "sale",
+  listingType: "house",
+  title: "",
+  description: "",
+  price: "",
+  deposit: "",
+  availableFrom: "",
+  levy: "",
+  ratesTaxes: "",
+  bedrooms: "",
+  bathrooms: "",
+  garages: "",
+  parking: "",
+  floorSize: "",
+  erfSize: "",
+  petsAllowed: false,
+  furnished: false,
+  streetAddress: "",
+  suburb: "",
+  city: "",
+  province: "",
+  postalCode: "",
+  lat: "",
+  lng: "",
+  features: [],
+  contactName: "",
+  contactPhone: "",
+  contactEmail: "",
+  coverIndex: 0,
+};
+
+function loadListingDraft(): ListingDraftState {
+  if (typeof window === "undefined") return INITIAL_LISTING_DRAFT;
+
+  try {
+    const raw = window.localStorage.getItem(LISTING_DRAFT_KEY);
+    if (!raw) return INITIAL_LISTING_DRAFT;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return INITIAL_LISTING_DRAFT;
+    }
+
+    const draft = { ...INITIAL_LISTING_DRAFT, ...parsed } as ListingDraftState;
+    return {
+      ...draft,
+      saleType: SALE_TYPES.includes(draft.saleType) ? draft.saleType : "sale",
+      listingType: LISTING_TYPES.includes(draft.listingType) ? draft.listingType : "house",
+      features: Array.isArray(draft.features) ? draft.features.map(String) : [],
+      coverIndex: Number.isInteger(draft.coverIndex) ? Math.max(0, draft.coverIndex) : 0,
+    };
+  } catch {
+    return INITIAL_LISTING_DRAFT;
+  }
+}
+
+function saveListingDraft(draft: ListingDraftState) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(LISTING_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // Draft saving should never block listing creation.
+  }
+}
+
+function clearListingDraft() {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.removeItem(LISTING_DRAFT_KEY);
+  } catch {
+    // Draft cleanup should never block navigation.
+  }
+}
 
 /* ------------------ Description Generator Helpers ------------------ */
 
@@ -131,61 +241,130 @@ function generateListingDescription(input: {
 export default function NewListingPage() {
   const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
+  const [initialDraft] = useState(loadListingDraft);
 
   // Core
-  const [saleType, setSaleType] = useState<(typeof SALE_TYPES)[number]>("sale");
-  const [listingType, setListingType] = useState<(typeof LISTING_TYPES)[number]>("house");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [saleType, setSaleType] = useState<(typeof SALE_TYPES)[number]>(initialDraft.saleType);
+  const [listingType, setListingType] = useState<(typeof LISTING_TYPES)[number]>(initialDraft.listingType);
+  const [title, setTitle] = useState(initialDraft.title);
+  const [description, setDescription] = useState(initialDraft.description);
 
   // Price
-  const [price, setPrice] = useState(""); // sale price OR rent per month
-  const [deposit, setDeposit] = useState("");
-  const [availableFrom, setAvailableFrom] = useState(""); // YYYY-MM-DD
-  const [levy, setLevy] = useState("");
-  const [ratesTaxes, setRatesTaxes] = useState("");
+  const [price, setPrice] = useState(initialDraft.price); // sale price OR rent per month
+  const [deposit, setDeposit] = useState(initialDraft.deposit);
+  const [availableFrom, setAvailableFrom] = useState(initialDraft.availableFrom); // YYYY-MM-DD
+  const [levy, setLevy] = useState(initialDraft.levy);
+  const [ratesTaxes, setRatesTaxes] = useState(initialDraft.ratesTaxes);
 
   // Property details
-  const [bedrooms, setBedrooms] = useState("");
-  const [bathrooms, setBathrooms] = useState("");
-  const [garages, setGarages] = useState("");
-  const [parking, setParking] = useState("");
-  const [floorSize, setFloorSize] = useState("");
-  const [erfSize, setErfSize] = useState("");
+  const [bedrooms, setBedrooms] = useState(initialDraft.bedrooms);
+  const [bathrooms, setBathrooms] = useState(initialDraft.bathrooms);
+  const [garages, setGarages] = useState(initialDraft.garages);
+  const [parking, setParking] = useState(initialDraft.parking);
+  const [floorSize, setFloorSize] = useState(initialDraft.floorSize);
+  const [erfSize, setErfSize] = useState(initialDraft.erfSize);
 
   // Flags
-  const [petsAllowed, setPetsAllowed] = useState(false);
-  const [furnished, setFurnished] = useState(false);
+  const [petsAllowed, setPetsAllowed] = useState(initialDraft.petsAllowed);
+  const [furnished, setFurnished] = useState(initialDraft.furnished);
 
   // Location
-  const [streetAddress, setStreetAddress] = useState("");
-  const [suburb, setSuburb] = useState("");
-  const [city, setCity] = useState("");
-  const [province, setProvince] = useState("");
-  const [postalCode, setPostalCode] = useState("");
+  const [streetAddress, setStreetAddress] = useState(initialDraft.streetAddress);
+  const [suburb, setSuburb] = useState(initialDraft.suburb);
+  const [city, setCity] = useState(initialDraft.city);
+  const [province, setProvince] = useState(initialDraft.province);
+  const [postalCode, setPostalCode] = useState(initialDraft.postalCode);
 
   // Optional coords
-  const [lat, setLat] = useState("");
-  const [lng, setLng] = useState("");
+  const [lat, setLat] = useState(initialDraft.lat);
+  const [lng, setLng] = useState(initialDraft.lng);
 
   // Features
-  const [features, setFeatures] = useState<string[]>([]);
+  const [features, setFeatures] = useState<string[]>(initialDraft.features);
 
   // Contact
-  const [contactName, setContactName] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
+  const [contactName, setContactName] = useState(initialDraft.contactName);
+  const [contactPhone, setContactPhone] = useState(initialDraft.contactPhone);
+  const [contactEmail, setContactEmail] = useState(initialDraft.contactEmail);
 
   // Photos
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [coverIndex, setCoverIndex] = useState(0);
+  const [coverIndex, setCoverIndex] = useState(initialDraft.coverIndex);
 
   // Separate loading states (AI vs Create Listing)
   const [loading, setLoading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      saveListingDraft({
+        saleType,
+        listingType,
+        title,
+        description,
+        price,
+        deposit,
+        availableFrom,
+        levy,
+        ratesTaxes,
+        bedrooms,
+        bathrooms,
+        garages,
+        parking,
+        floorSize,
+        erfSize,
+        petsAllowed,
+        furnished,
+        streetAddress,
+        suburb,
+        city,
+        province,
+        postalCode,
+        lat,
+        lng,
+        features,
+        contactName,
+        contactPhone,
+        contactEmail,
+        coverIndex,
+      });
+    }, 400);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    saleType,
+    listingType,
+    title,
+    description,
+    price,
+    deposit,
+    availableFrom,
+    levy,
+    ratesTaxes,
+    bedrooms,
+    bathrooms,
+    garages,
+    parking,
+    floorSize,
+    erfSize,
+    petsAllowed,
+    furnished,
+    streetAddress,
+    suburb,
+    city,
+    province,
+    postalCode,
+    lat,
+    lng,
+    features,
+    contactName,
+    contactPhone,
+    contactEmail,
+    coverIndex,
+  ]);
 
   function cleanNumber(input: string) {
     const v = input.trim().replace(/[^\d.]/g, "");
@@ -425,7 +604,7 @@ export default function NewListingPage() {
     const user = userRes.user;
     if (!user) {
       setLoading(false);
-      router.push("/login");
+      router.push(`/login?next=${encodeURIComponent("/dashboard/listings/new")}`);
       return;
     }
 
@@ -535,6 +714,7 @@ export default function NewListingPage() {
       }
 
       setLoading(false);
+      clearListingDraft();
       router.push("/dashboard/listings");
     } catch (e: any) {
       setLoading(false);

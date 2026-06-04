@@ -10,23 +10,24 @@ export default function CheckEmailClient() {
   const email = searchParams.get("email");
   const next = searchParams.get("next");
   const role = searchParams.get("role");
+  const safeNext = safeRedirectPath(next);
   const supabase = useMemo(() => supabaseBrowser(), []);
   const [resendStatus, setResendStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (next) {
-      localStorage.setItem("auth_redirect_after_verify", next);
+    if (safeNext) {
+      localStorage.setItem("auth_redirect_after_verify", safeNext);
     }
-  }, [next]);
+  }, [safeNext]);
 
   const loginHref = useMemo(() => {
     const params = new URLSearchParams();
-    if (next) params.set("next", next);
+    if (safeNext) params.set("next", safeNext);
     if (role) params.set("role", role);
     const query = params.toString();
     return `/login${query ? `?${query}` : ""}`;
-  }, [next, role]);
+  }, [safeNext, role]);
 
   async function resendConfirmation() {
     if (!email) {
@@ -39,7 +40,7 @@ export default function CheckEmailClient() {
     setResendMessage(null);
 
     const params = new URLSearchParams();
-    params.set("next", next || "/dashboard");
+    params.set("next", safeNext || "/dashboard");
 
     const { error } = await supabase.auth.resend({
       type: "signup",
@@ -123,4 +124,17 @@ export default function CheckEmailClient() {
       </div>
     </div>
   );
+}
+
+function safeRedirectPath(value: string | null) {
+  if (!value) return null;
+
+  try {
+    const decoded = decodeURIComponent(value);
+    if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
+    if (decoded.includes("\\") || decoded.includes("\n") || decoded.includes("\r")) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
 }
