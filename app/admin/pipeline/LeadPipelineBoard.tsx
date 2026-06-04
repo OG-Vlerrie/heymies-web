@@ -14,6 +14,8 @@ type StageKey =
   | "won"
   | "lost";
 
+type QueueFilter = "all" | "due" | "agent_ready" | "buyer_response" | "stale" | "open";
+
 const STAGES: { key: StageKey; title: string; hint: string }[] = [
   { key: "new", title: "New", hint: "Fresh enquiries awaiting a first decision." },
   { key: "needs_confirmation", title: "Needs Confirmation", hint: "Mia should check intent before handover." },
@@ -35,17 +37,27 @@ export default function LeadPipelineBoard({
   const [enquiries, setEnquiries] = useState(initialEnquiries);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const grouped = useMemo(() => {
-    const search = q.trim().toLowerCase();
-    const next = Object.fromEntries(STAGES.map((stage) => [stage.key, [] as PipelineEnquiry[]])) as Record<
-      StageKey,
-      PipelineEnquiry[]
-    >;
+  const queueCounts = useMemo(
+    () => ({
+      all: enquiries.length,
+      due: enquiries.filter(isDue).length,
+      agent_ready: enquiries.filter(isAgentReady).length,
+      buyer_response: enquiries.filter(hasBuyerResponse).length,
+      stale: enquiries.filter(isStaleNurture).length,
+      open: enquiries.filter(isOpenLead).length,
+    }),
+    [enquiries]
+  );
 
-    enquiries
+  const filteredEnquiries = useMemo(() => {
+    const search = q.trim().toLowerCase();
+
+    return enquiries
+      .filter((enquiry) => matchesQueueFilter(enquiry, queueFilter))
       .filter((enquiry) => {
         if (!search) return true;
         return [
@@ -55,6 +67,7 @@ export default function LeadPipelineBoard({
           enquiry.latest_message ?? "",
           enquiry.qualification_summary ?? "",
           enquiry.next_action ?? "",
+          enquiry.last_buyer_response ?? "",
           enquiry.listing?.title ?? "",
           enquiry.listing?.suburb ?? "",
           enquiry.listing?.city ?? "",
@@ -63,12 +76,21 @@ export default function LeadPipelineBoard({
           .toLowerCase()
           .includes(search);
       })
-      .forEach((enquiry) => {
-        next[stageFor(enquiry)].push(enquiry);
-      });
+      .sort(compareEnquiries);
+  }, [enquiries, q, queueFilter]);
+
+  const grouped = useMemo(() => {
+    const next = Object.fromEntries(STAGES.map((stage) => [stage.key, [] as PipelineEnquiry[]])) as Record<
+      StageKey,
+      PipelineEnquiry[]
+    >;
+
+    filteredEnquiries.forEach((enquiry) => {
+      next[stageFor(enquiry)].push(enquiry);
+    });
 
     return next;
-  }, [enquiries, q]);
+  }, [filteredEnquiries]);
 
   async function updateEnquiry(id: string, payload: Record<string, string>) {
     setBusyId(id);
@@ -146,19 +168,30 @@ export default function LeadPipelineBoard({
 
   return (
     <section className="mt-8">
-      <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Working Board</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Use quick actions for obvious moves, or open a lead for full context.
-          </p>
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Command Queue</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Start with due follow-ups, buyer replies, and agent-ready handovers.
+            </p>
+          </div>
+          <input
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            placeholder="Search buyer, listing, area, message..."
+            className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm outline-none focus:border-slate-400 lg:w-96"
+          />
         </div>
-        <input
-          value={q}
-          onChange={(event) => setQ(event.target.value)}
-          placeholder="Search buyer, listing, area, message..."
-          className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm outline-none focus:border-slate-400 lg:w-96"
-        />
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <QueueButton label="All" value={queueCounts.all} active={queueFilter === "all"} onClick={() => setQueueFilter("all")} />
+          <QueueButton label="Due now" value={queueCounts.due} active={queueFilter === "due"} onClick={() => setQueueFilter("due")} tone="warn" />
+          <QueueButton label="Agent-ready" value={queueCounts.agent_ready} active={queueFilter === "agent_ready"} onClick={() => setQueueFilter("agent_ready")} tone="good" />
+          <QueueButton label="Buyer replies" value={queueCounts.buyer_response} active={queueFilter === "buyer_response"} onClick={() => setQueueFilter("buyer_response")} tone="good" />
+          <QueueButton label="Stale" value={queueCounts.stale} active={queueFilter === "stale"} onClick={() => setQueueFilter("stale")} tone="bad" />
+          <QueueButton label="Open" value={queueCounts.open} active={queueFilter === "open"} onClick={() => setQueueFilter("open")} />
+        </div>
       </div>
 
       {message ? (
@@ -173,6 +206,23 @@ export default function LeadPipelineBoard({
       ) : null}
 
       <div className="mt-6 overflow-x-auto pb-4">
+        <div className="mb-3 flex items-center justify-between gap-3 text-sm text-slate-600">
+          <p>
+            Showing <span className="font-semibold text-slate-900">{filteredEnquiries.length}</span> leads
+          </p>
+          {queueFilter !== "all" || q ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQueueFilter("all");
+                setQ("");
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Clear filters
+            </button>
+          ) : null}
+        </div>
         <div className="grid min-w-[1420px] grid-cols-8 gap-4">
           {STAGES.map((stage) => (
             <div key={stage.key} className="rounded-3xl border border-slate-200 bg-white/85 p-4 shadow-sm">
@@ -211,6 +261,44 @@ export default function LeadPipelineBoard({
   );
 }
 
+function QueueButton({
+  label,
+  value,
+  active,
+  onClick,
+  tone = "neutral",
+}: {
+  label: string;
+  value: number;
+  active: boolean;
+  onClick: () => void;
+  tone?: "neutral" | "good" | "warn" | "bad";
+}) {
+  const toneClass =
+    tone === "good"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : tone === "warn"
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : tone === "bad"
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-slate-200 bg-slate-50 text-slate-700";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "rounded-2xl border p-4 text-left transition",
+        active ? "ring-2 ring-emerald-500 ring-offset-2" : "hover:border-emerald-200",
+        toneClass,
+      ].join(" ")}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-80">{label}</p>
+      <p className="mt-2 text-2xl font-semibold">{value}</p>
+    </button>
+  );
+}
+
 function LeadCard({
   enquiry,
   busy,
@@ -228,7 +316,9 @@ function LeadCard({
   const [note, setNote] = useState("");
 
   const buyerName = enquiry.full_name || enquiry.email || "Unnamed buyer";
-  const due = enquiry.next_nurture_at && new Date(enquiry.next_nurture_at).getTime() <= Date.now();
+  const due = isDue(enquiry);
+  const stale = isStaleNurture(enquiry);
+  const buyerResponded = hasBuyerResponse(enquiry);
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -250,6 +340,11 @@ function LeadCard({
             Due
           </span>
         ) : null}
+        {stale ? (
+          <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700">
+            Stale
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -265,6 +360,11 @@ function LeadCard({
 
       {enquiry.next_action ? (
         <p className="mt-3 line-clamp-3 text-xs leading-5 text-slate-700">{enquiry.next_action}</p>
+      ) : null}
+      {buyerResponded ? (
+        <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-5 text-emerald-900">
+          Buyer replied: {enquiry.last_buyer_response?.replaceAll("_", " ") ?? "response received"}
+        </p>
       ) : null}
 
       <div className="mt-4 grid gap-2">
@@ -381,6 +481,62 @@ function stageFor(enquiry: PipelineEnquiry): StageKey {
   if (enquiry.qualification_status === "nurture_for_better_fit") return "better_fit";
   if (enquiry.status === "new") return "new";
   return "needs_confirmation";
+}
+
+function matchesQueueFilter(enquiry: PipelineEnquiry, filter: QueueFilter) {
+  if (filter === "all") return true;
+  if (filter === "due") return isDue(enquiry);
+  if (filter === "agent_ready") return isAgentReady(enquiry);
+  if (filter === "buyer_response") return hasBuyerResponse(enquiry);
+  if (filter === "stale") return isStaleNurture(enquiry);
+  if (filter === "open") return isOpenLead(enquiry);
+  return true;
+}
+
+function isDue(enquiry: PipelineEnquiry) {
+  return Boolean(
+    enquiry.next_nurture_at &&
+      new Date(enquiry.next_nurture_at).getTime() <= Date.now() &&
+      ["pending", "nurturing"].includes(enquiry.nurture_status ?? "")
+  );
+}
+
+function isStaleNurture(enquiry: PipelineEnquiry) {
+  if (!isDue(enquiry) || !enquiry.next_nurture_at) return false;
+  return new Date(enquiry.next_nurture_at).getTime() <= Date.now() - 24 * 60 * 60 * 1000;
+}
+
+function isAgentReady(enquiry: PipelineEnquiry) {
+  return enquiry.qualification_status === "agent_ready" || enquiry.nurture_status === "handover_ready";
+}
+
+function hasBuyerResponse(enquiry: PipelineEnquiry) {
+  return Boolean(enquiry.last_buyer_response || enquiry.last_buyer_responded_at);
+}
+
+function isOpenLead(enquiry: PipelineEnquiry) {
+  return !["won", "lost"].includes(enquiry.status ?? "") && enquiry.nurture_status !== "completed";
+}
+
+function compareEnquiries(a: PipelineEnquiry, b: PipelineEnquiry) {
+  const priority = (enquiry: PipelineEnquiry) =>
+    (isStaleNurture(enquiry) ? 60 : 0) +
+    (isDue(enquiry) ? 50 : 0) +
+    (isAgentReady(enquiry) ? 40 : 0) +
+    (hasBuyerResponse(enquiry) ? 35 : 0) +
+    (enquiry.request_viewing ? 20 : 0) +
+    (enquiry.readiness_score ?? 0) * 0.1;
+
+  const scoreDiff = priority(b) - priority(a);
+  if (scoreDiff !== 0) return scoreDiff;
+
+  return dateValue(b.last_enquired_at) - dateValue(a.last_enquired_at);
+}
+
+function dateValue(value: string | null) {
+  if (!value) return 0;
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {

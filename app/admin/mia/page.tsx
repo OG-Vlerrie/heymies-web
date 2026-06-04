@@ -61,7 +61,9 @@ type EmailPreference = {
 };
 
 export default async function MiaAdminPage() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !adminKey) {
     return (
       <main className="tech-page text-slate-900">
         <div className="mx-auto max-w-7xl px-4 py-12">
@@ -164,12 +166,20 @@ export default async function MiaAdminPage() {
               Monitor automated nurture, buyer responses, agent-ready handovers, match emails, and paused follow-ups.
             </p>
           </div>
-          <Link
-            href="/admin"
-            className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
-          >
-            Admin home
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/admin/pipeline"
+              className="tech-button-primary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
+            >
+              Lead Pipeline
+            </Link>
+            <Link
+              href="/admin"
+              className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
+            >
+              Admin home
+            </Link>
+          </div>
         </div>
 
         <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
