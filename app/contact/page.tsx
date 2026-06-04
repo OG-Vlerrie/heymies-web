@@ -28,7 +28,7 @@ export default function ContactPage() {
           <div className="grid gap-4">
             <TechCard>
               <strong>Email</strong>
-              <p className="mt-2 text-sm text-slate-700">gerhard@vertacore.co.za</p>
+              <p className="mt-2 text-sm text-slate-700">gerhard@heymies.co.za</p>
             </TechCard>
             <TechCard>
               <strong>Pretoria, Gauteng</strong>
