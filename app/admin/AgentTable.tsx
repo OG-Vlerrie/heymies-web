@@ -61,7 +61,7 @@ export default function AgentTable({ initialAgents }: { initialAgents: Agent[] }
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.ok) throw new Error(data?.error || "Failed");
 
-      setAgents((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+      setAgents((prev) => prev.map((a) => (a.id === id ? { ...a, ...(data.agent ?? { status }) } : a)));
     } finally {
       setBusyId(null);
     }

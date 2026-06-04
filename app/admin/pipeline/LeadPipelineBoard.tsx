@@ -106,7 +106,11 @@ export default function LeadPipelineBoard({
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.ok) throw new Error(data?.error || "Failed to update lead.");
 
-      if (payload.action !== "send_followup_now") {
+      if (data?.enquiry) {
+        setEnquiries((prev) =>
+          prev.map((enquiry) => (enquiry.id === id ? { ...enquiry, ...data.enquiry } : enquiry))
+        );
+      } else if (payload.action !== "send_followup_now") {
         setEnquiries((prev) =>
           prev.map((enquiry) =>
             enquiry.id === id

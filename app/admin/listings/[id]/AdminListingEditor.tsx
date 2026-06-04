@@ -73,7 +73,7 @@ export default function AdminListingEditor({ initialListing }: { initialListing:
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.ok) throw new Error(data?.error || "Failed to save listing.");
 
-      setListing((prev) => ({ ...prev, status: nextStatus }));
+      setListing((prev) => ({ ...prev, ...(data.listing ?? {}), status: data.listing?.status ?? nextStatus }));
       setMessage(nextStatus === "active" ? "Listing saved and published." : "Listing saved.");
     } catch (e: any) {
       setError(e?.message ?? "Failed to save listing.");

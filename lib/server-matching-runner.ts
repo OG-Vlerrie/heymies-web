@@ -12,16 +12,35 @@ export async function runMatchingJob(
 
   if (secret) headers["x-matching-secret"] = secret;
 
-  const res = await fetch(`${requestOrigin(req)}/api/matching/run`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${requestOrigin(req)}/api/matching/run`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (error) {
+    await logApiError({
+      req,
+      route: new URL(req.url).pathname,
+      status: 502,
+      error,
+      metadata: {
+        proxiedRoute: "/api/matching/run",
+        listingId: body.listingId ?? null,
+      },
+    });
+
+    return NextResponse.json(
+      { ok: false, error: "Could not reach matching job." },
+      { status: 502 }
+    );
+  }
 
   const data = await res.json().catch(() => ({}));
 
-  if (!res.ok) {
+  if (!res.ok || data?.ok === false) {
     await logApiError({
       req,
       route: new URL(req.url).pathname,
@@ -35,7 +54,7 @@ export async function runMatchingJob(
 
     return NextResponse.json(
       { ok: false, error: data?.error ?? "Matching run failed." },
-      { status: res.status }
+      { status: res.ok ? 500 : res.status }
     );
   }
 

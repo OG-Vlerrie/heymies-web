@@ -81,7 +81,7 @@ export default function AdminListingsTable({ initialListings }: { initialListing
       if (!res.ok || !data?.ok) throw new Error(data?.error || "Failed to update listing.");
 
       setListings((prev) =>
-        prev.map((listing) => (listing.id === id ? { ...listing, status } : listing))
+        prev.map((listing) => (listing.id === id ? { ...listing, ...(data.listing ?? { status }) } : listing))
       );
     } catch (e: any) {
       setError(e?.message ?? "Failed to update listing.");

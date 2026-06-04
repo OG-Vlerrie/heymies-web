@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logAdminActivity } from "@/lib/admin-activity";
+import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
 
 const LEAD_STATUSES = new Set(["new", "contacted", "qualified", "viewing", "offer", "won", "lost"]);
 const QUALIFICATION_STATUSES = new Set([
@@ -11,11 +13,20 @@ const QUALIFICATION_STATUSES = new Set([
   "not_ready",
 ]);
 const NURTURE_STATUSES = new Set(["pending", "nurturing", "paused", "completed", "handover_ready"]);
+const PIPELINE_ENQUIRY_SELECT =
+  "id,user_id,listing_id,full_name,email,phone,status,enquiry_count,latest_message,request_viewing,readiness_score,property_fit_score,qualification_status,qualification_summary,next_action,nurture_status,next_nurture_at,last_nurtured_at,last_buyer_response,last_buyer_responded_at,agent_ready_at,first_enquired_at,last_enquired_at,listing:listings(id,title,suburb,city,price,price_per_month,sale_type,cover_image,status)";
 
 export async function PATCH(req: Request) {
+  let body: Record<string, any>;
+
   try {
-    const body = await req.json();
-    const id = body?.id;
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  try {
+    const id = typeof body?.id === "string" ? body.id.trim() : "";
     const action = typeof body?.action === "string" ? body.action : "";
 
     if (!id) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
@@ -74,10 +85,31 @@ export async function PATCH(req: Request) {
     }
 
     const sb = supabaseAdmin();
+    let updatedEnquiry: Record<string, any> | null = null;
     if (Object.keys(update).length > 0) {
-      const { error } = await sb.from("enquiries").update(update).eq("id", id);
+      const { data, error } = await sb
+        .from("enquiries")
+        .update({ ...update, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select(PIPELINE_ENQUIRY_SELECT)
+        .maybeSingle();
 
-      if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      if (error) {
+        return apiErrorResponse({
+          req,
+          route: "/api/admin/enquiries",
+          status: 500,
+          error,
+          publicMessage: "Could not update lead.",
+          metadata: { id, update },
+        });
+      }
+
+      if (!data) {
+        return NextResponse.json({ ok: false, error: "Lead not found" }, { status: 404 });
+      }
+
+      updatedEnquiry = normalizeRelation(data, "listing");
     }
 
     const events = [];
@@ -99,7 +131,17 @@ export async function PATCH(req: Request) {
     }
 
     if (events.length > 0) {
-      await sb.from("enquiry_events").insert(events);
+      const { error: eventError } = await sb.from("enquiry_events").insert(events);
+      if (eventError) {
+        return apiErrorResponse({
+          req,
+          route: "/api/admin/enquiries",
+          status: 500,
+          error: eventError,
+          publicMessage: "Lead updated, but the activity event could not be saved.",
+          metadata: { id, eventCount: events.length },
+        });
+      }
     }
 
     await logAdminActivity({
@@ -111,9 +153,17 @@ export async function PATCH(req: Request) {
       metadata: { update, has_internal_note: Boolean(internalNote) },
     });
 
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
+    revalidateLeadPaths(id);
+
+    return NextResponse.json({ ok: true, enquiry: updatedEnquiry });
+  } catch (error) {
+    return apiErrorResponse({
+      req,
+      route: "/api/admin/enquiries",
+      status: 500,
+      error,
+      publicMessage: "Could not update lead.",
+    });
   }
 }
 
@@ -138,22 +188,49 @@ async function sendFollowupNow(req: Request, id: string) {
     .eq("id", id);
 
   if (updateError) {
-    return NextResponse.json({ ok: false, error: updateError.message }, { status: 500 });
+    return apiErrorResponse({
+      req,
+      route: "/api/admin/enquiries",
+      status: 500,
+      error: updateError,
+      publicMessage: "Could not queue Mia follow-up.",
+      metadata: { id, action: "send_followup_now" },
+    });
   }
 
   const origin = requestOrigin(req);
-  const res = await fetch(`${origin}/api/nurture/run`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${secret}`,
-    },
-    body: JSON.stringify({ enquiryId: id, force: true, limit: 1 }),
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${origin}/api/nurture/run`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${secret}`,
+      },
+      body: JSON.stringify({ enquiryId: id, force: true, limit: 1 }),
+      cache: "no-store",
+    });
+  } catch (error) {
+    return apiErrorResponse({
+      req,
+      route: "/api/admin/enquiries",
+      status: 502,
+      error,
+      publicMessage: "Could not reach Mia nurture job.",
+      metadata: { id, action: "send_followup_now", origin },
+    });
+  }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.ok) {
+    await logApiError({
+      req,
+      route: "/api/admin/enquiries",
+      status: res.status || 500,
+      error: data?.error ?? "Mia follow-up failed.",
+      metadata: { id, action: "send_followup_now", details: data },
+    });
+
     return NextResponse.json(
       { ok: false, error: data?.error ?? "Mia follow-up failed.", details: data },
       { status: res.status || 500 }
@@ -176,7 +253,15 @@ async function sendFollowupNow(req: Request, id: string) {
     metadata: data,
   });
 
-  return NextResponse.json({ ok: true, nurture: data });
+  const { data: enquiry } = await sb
+    .from("enquiries")
+    .select(PIPELINE_ENQUIRY_SELECT)
+    .eq("id", id)
+    .maybeSingle();
+
+  revalidateLeadPaths(id);
+
+  return NextResponse.json({ ok: true, nurture: data, enquiry: normalizeRelation(enquiry, "listing") });
 }
 
 function requestOrigin(req: Request) {
@@ -186,4 +271,20 @@ function requestOrigin(req: Request) {
 
   if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
   return url.origin;
+}
+
+function normalizeRelation<T extends Record<string, any> | null>(row: T, key: string) {
+  if (!row) return null;
+  return {
+    ...row,
+    [key]: Array.isArray(row[key]) ? row[key][0] : row[key],
+  };
+}
+
+function revalidateLeadPaths(id: string) {
+  revalidatePath("/admin");
+  revalidatePath("/admin/mia");
+  revalidatePath("/admin/pipeline");
+  revalidatePath(`/admin/enquiries/${id}`);
+  revalidatePath("/dashboard/leads");
 }

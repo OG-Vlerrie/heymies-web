@@ -73,7 +73,9 @@ export default function AdminUsersTable({ initialUsers }: { initialUsers: AdminU
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.ok) throw new Error(data?.error || "Failed to update role.");
 
-      setUsers((prev) => prev.map((user) => (user.id === id ? { ...user, role } : user)));
+      setUsers((prev) =>
+        prev.map((user) => (user.id === id ? { ...user, role: data.profile?.role ?? role } : user))
+      );
     } catch (e: any) {
       setError(e?.message ?? "Failed to update role.");
     } finally {

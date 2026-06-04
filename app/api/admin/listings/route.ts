@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getListingQuality } from "@/lib/listing-quality";
 import { logAdminActivity } from "@/lib/admin-activity";
+import { apiErrorResponse } from "@/lib/api-error-logging";
 
 const ALLOWED_STATUSES = new Set(["active", "draft", "inactive"]);
 const EDITABLE_FIELDS = new Set([
@@ -36,11 +38,21 @@ const EDITABLE_FIELDS = new Set([
   "images",
   "cover_image",
 ]);
+const ADMIN_LISTING_SELECT =
+  "id,agent_id,title,description,status,sale_type,listing_type,price,price_per_month,deposit,available_from,bedrooms,bathrooms,garages,parking,floor_size_m2,erf_size_m2,levy,rates_taxes,pets_allowed,furnished,street_address,suburb,city,province,postal_code,features,contact_name,contact_email,contact_phone,images,cover_image";
 
 export async function PATCH(req: Request) {
+  let body: Record<string, any>;
+
   try {
-    const body = await req.json();
-    const { id, status } = body;
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  try {
+    const id = typeof body.id === "string" ? body.id.trim() : "";
+    const status = body.status;
 
     if (!id) return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
     if (status !== undefined && !ALLOWED_STATUSES.has(String(status))) {
@@ -69,7 +81,14 @@ export async function PATCH(req: Request) {
         .single();
 
       if (listingErr) {
-        return NextResponse.json({ ok: false, error: listingErr.message }, { status: 500 });
+        return apiErrorResponse({
+          req,
+          route: "/api/admin/listings",
+          status: 500,
+          error: listingErr,
+          publicMessage: "Could not load listing for publication checks.",
+          metadata: { id },
+        });
       }
 
       const nextListing = { ...(currentListing ?? {}), ...update };
@@ -82,8 +101,24 @@ export async function PATCH(req: Request) {
       }
     }
 
-    const { error } = await sb.from("listings").update(update).eq("id", id);
-    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    const { data: listing, error } = await sb
+      .from("listings")
+      .update(update)
+      .eq("id", id)
+      .select(ADMIN_LISTING_SELECT)
+      .maybeSingle();
+    if (error) {
+      return apiErrorResponse({
+        req,
+        route: "/api/admin/listings",
+        status: 500,
+        error,
+        publicMessage: "Could not update listing.",
+        metadata: { id, fields: Object.keys(update) },
+      });
+    }
+
+    if (!listing) return NextResponse.json({ ok: false, error: "Listing not found" }, { status: 404 });
 
     await logAdminActivity({
       req,
@@ -96,9 +131,17 @@ export async function PATCH(req: Request) {
       metadata: update,
     });
 
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
+    revalidateListingPaths(id);
+
+    return NextResponse.json({ ok: true, listing });
+  } catch (error) {
+    return apiErrorResponse({
+      req,
+      route: "/api/admin/listings",
+      status: 500,
+      error,
+      publicMessage: "Could not update listing.",
+    });
   }
 }
 
@@ -136,4 +179,14 @@ function cleanValue(key: string, value: unknown) {
 
   if (value === "") return null;
   return value;
+}
+
+function revalidateListingPaths(id: string) {
+  revalidatePath("/admin");
+  revalidatePath("/admin/listings");
+  revalidatePath(`/admin/listings/${id}`);
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${id}`);
+  revalidatePath("/dashboard/listings");
+  revalidatePath(`/dashboard/listings/${id}/edit`);
 }

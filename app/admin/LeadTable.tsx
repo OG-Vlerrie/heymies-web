@@ -37,7 +37,9 @@ export default function LeadTable({ initialLeads }: { initialLeads: Lead[] }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.ok) throw new Error(data?.error || "Failed");
 
-      setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, tag: tag || null } : l)));
+      setLeads((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, ...(data.lead ?? { tag: tag || null }) } : l))
+      );
     } finally {
       setBusyId(null);
     }
