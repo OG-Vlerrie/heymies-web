@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { event as gaEvent } from "@/lib/marketing/ga";
+import { track } from "@/lib/marketing/metaPixel";
 
 type Status = "idle" | "loading" | "ok" | "error";
 
@@ -16,7 +18,9 @@ const requestTypes = [
 export default function DemoRequestForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [agencyName, setAgencyName] = useState("");
+  const [city, setCity] = useState("");
   const [agencySize, setAgencySize] = useState(agencySizes[1]);
   const [requestType, setRequestType] = useState(requestTypes[0]);
   const [website, setWebsite] = useState("");
@@ -31,6 +35,8 @@ export default function DemoRequestForm() {
 
     const demoMessage = [
       `Agency: ${agencyName || "-"}`,
+      `Phone: ${phone || "-"}`,
+      `City: ${city || "-"}`,
       `Agency size: ${agencySize}`,
       `Request type: ${requestType}`,
       `Website: ${website || "-"}`,
@@ -45,8 +51,12 @@ export default function DemoRequestForm() {
         body: JSON.stringify({
           full_name: fullName,
           email,
+          phone,
+          city,
+          agency_name: agencyName,
           message: demoMessage,
           source: "landing-demo-form",
+          lead_source: getDemoLeadSource(),
           tag: "demo",
         }),
       });
@@ -60,9 +70,20 @@ export default function DemoRequestForm() {
 
       setStatus("ok");
       setNotice("Demo request received. We'll come back with next steps soon.");
+      track("Lead", {
+        content_name: "Demo request",
+        content_category: "agent_demo",
+        request_type: requestType,
+        agency_size: agencySize,
+      });
+      gaEvent("generate_lead", {
+        source: getDemoLeadSource(),
+      });
       setFullName("");
       setEmail("");
+      setPhone("");
       setAgencyName("");
+      setCity("");
       setAgencySize(agencySizes[1]);
       setRequestType(requestTypes[0]);
       setWebsite("");
@@ -96,6 +117,30 @@ export default function DemoRequestForm() {
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            className="tech-input w-full rounded-xl px-4 py-3 text-sm text-slate-950"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          Phone
+          <input
+            type="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+            className="tech-input w-full rounded-xl px-4 py-3 text-sm text-slate-950"
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          City
+          <input
+            type="text"
+            autoComplete="address-level2"
+            value={city}
+            onChange={(event) => setCity(event.target.value)}
             className="tech-input w-full rounded-xl px-4 py-3 text-sm text-slate-950"
           />
         </label>
@@ -187,4 +232,11 @@ export default function DemoRequestForm() {
       ) : null}
     </form>
   );
+}
+
+function getDemoLeadSource() {
+  if (typeof window === "undefined") return "homepage-demo-form";
+
+  const source = new URLSearchParams(window.location.search).get("source");
+  return source || "homepage-demo-form";
 }

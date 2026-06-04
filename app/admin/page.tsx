@@ -222,6 +222,12 @@ export default async function AdminPage() {
                 QA Checklist
               </Link>
               <Link
+                href="/admin/marketing"
+                className="tech-button-secondary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
+              >
+                Marketing
+              </Link>
+              <Link
                 href="/admin/mia"
                 className="tech-button-primary inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
               >
@@ -272,6 +278,12 @@ export default async function AdminPage() {
             body="Review weekly performance, admin audit activity, lead outcomes, and export CSV reports."
             href="/admin/reports"
             stat="Metrics"
+          />
+          <AdminCard
+            title="Marketing assets"
+            body="Copy-ready reel scripts, carousel concepts, headlines, primary text, and CTA ideas for agent ads."
+            href="/admin/marketing"
+            stat="Ad copy"
           />
           <AdminCard
             title="Launch readiness"

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
+import { sendDemoLeadEmails } from "@/lib/email/sendDemoLeadEmails";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
@@ -8,7 +8,11 @@ export async function POST(req: Request) {
     const body = await req.json();
     const email = (body?.email ?? "").toString().trim().toLowerCase();
     const source = (body?.source ?? "website").toString();
+    const leadSource = (body?.lead_source ?? body?.source_detail ?? source).toString();
     const fullName = (body?.full_name ?? body?.name ?? "").toString().trim();
+    const agencyName = (body?.agency_name ?? body?.agencyName ?? "").toString().trim();
+    const phone = (body?.phone ?? "").toString().trim();
+    const city = (body?.city ?? "").toString().trim();
     const message = (body?.message ?? "").toString().trim();
     const tag = (body?.tag ?? "").toString().trim();
 
@@ -58,59 +62,38 @@ export async function POST(req: Request) {
       }
     }
 
-    if (
-      process.env.RESEND_API_KEY &&
-      process.env.EMAIL_FROM &&
-      process.env.LEAD_NOTIFY_TO
-    ) {
+    const isDemoRequest = tag === "demo" || source.includes("demo");
+
+    if (isDemoRequest) {
       try {
-        const resend = new Resend(process.env.RESEND_API_KEY);
-
-        const isDemoRequest = tag === "demo" || source.includes("demo");
-        const adminSubject = isDemoRequest
-          ? "New HeyMies demo request"
-          : "New HeyMies early-access lead";
-        const replySubject = isDemoRequest
-          ? "We received your HeyMies demo request"
-          : "You're on the HeyMies early access list";
-        const replyIntro = isDemoRequest
-          ? "we received your HeyMies demo request"
-          : "we received your HeyMies request";
-        const replyNext = isDemoRequest
-          ? "We'll come back to you soon with a useful next step."
-          : "We'll come back to you as soon as the next test slot is ready.";
-
-        await resend.emails.send({
-          from: process.env.EMAIL_FROM,
-          to: [process.env.LEAD_NOTIFY_TO],
-          subject: adminSubject,
-          html: `
-            ${fullName ? `<p><strong>Name:</strong> ${escapeHtml(fullName)}</p>` : ""}
-            <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-            <p><strong>Source:</strong> ${escapeHtml(source)}</p>
-            ${tag ? `<p><strong>Tag:</strong> ${escapeHtml(tag)}</p>` : ""}
-            ${message ? `<p><strong>Message:</strong><br />${escapeHtml(message).replaceAll("\n", "<br />")}</p>` : ""}
-          `,
+        const emailResult = await sendDemoLeadEmails({
+          name: fullName,
+          agencyName,
+          email,
+          phone,
+          city,
+          message,
+          source: leadSource,
         });
 
-        await resend.emails.send({
-          from: process.env.EMAIL_FROM,
-          to: [email],
-          subject: replySubject,
-          html: `
-            <p>Thanks${fullName ? ` ${escapeHtml(fullName.split(" ")[0])}` : ""} - ${replyIntro}.</p>
-            <p>${replyNext}</p>
-            <p><strong>HeyMies</strong></p>
-          `,
-        });
+        if (!emailResult.ok) {
+          console.error("Failed to send demo lead email:", emailResult.errors);
+          await logApiError({
+            req,
+            route: "/api/leads",
+            status: 502,
+            error: new Error("Failed to send demo lead email"),
+            metadata: { stage: "demo-email", email, source: leadSource, errors: emailResult.errors },
+          });
+        }
       } catch (emailError) {
-        console.error("Failed to send lead notification email:", emailError);
+        console.error("Failed to send demo lead email:", emailError);
         await logApiError({
           req,
           route: "/api/leads",
           status: 502,
           error: emailError,
-          metadata: { stage: "email", email, source },
+          metadata: { stage: "demo-email", email, source: leadSource },
         });
       }
     }
@@ -126,15 +109,6 @@ export async function POST(req: Request) {
       publicMessage: "Bad request",
     });
   }
-}
-
-function escapeHtml(input: string) {
-  return input
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 async function saveLead(
