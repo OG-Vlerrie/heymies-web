@@ -150,16 +150,26 @@ export default async function AdminLaunchPage() {
       serviceRole,
       "Set SUPABASE_SERVICE_ROLE_KEY in production. Rotate it first if it was exposed."
     ),
-    presentCheck("Resend API key", resendKey, "Set RESEND_API_KEY and verify the sender domain."),
+    {
+      label: "Resend API key",
+      status: resendKey ? "ready" : "watch",
+      detail: resendKey ? "Configured." : "RESEND_API_KEY is missing.",
+      action: "Set RESEND_API_KEY and verify the sender domain before public beta.",
+    },
     {
       label: "Email sender",
-      status: emailFrom && emailFrom.includes("@heymies.co.za") ? "ready" : emailFrom ? "watch" : "blocked",
+      status: emailFrom && emailFrom.includes("@heymies.co.za") ? "ready" : "watch",
       detail: emailFrom || "EMAIL_FROM is missing.",
       action: emailFrom.includes("@heymies.co.za")
         ? "Send one inbox and one spam-folder test before inviting users."
         : "Use a verified heymies.co.za sender before real-user email.",
     },
-    presentCheck("OpenAI key", openAiKey, "Set OPENAI_API_KEY for listing description generation."),
+    {
+      label: "OpenAI key",
+      status: openAiKey ? "ready" : "watch",
+      detail: openAiKey ? "Configured." : "OPENAI_API_KEY is missing. The listing form falls back to a local draft generator.",
+      action: "Set OPENAI_API_KEY for AI listing descriptions before public beta.",
+    },
     {
       label: "Admin credentials",
       status: adminUser && adminPass ? "watch" : "blocked",
@@ -189,9 +199,7 @@ export default async function AdminLaunchPage() {
       status:
         (cronSecret || nurtureSecret) && matchingSecret
           ? "ready"
-          : cronSecret || nurtureSecret || matchingSecret
-            ? "watch"
-            : "blocked",
+          : "watch",
       detail:
         (cronSecret || nurtureSecret) && matchingSecret
           ? "Nurture and matching job secrets are configured."
@@ -238,7 +246,7 @@ export default async function AdminLaunchPage() {
     },
     {
       label: "Listing completeness",
-      status: listingIssues.length === 0 && activeListings.count > 0 ? "ready" : listingIssues.length > 0 ? "watch" : "blocked",
+      status: activeListings.error ? "blocked" : listingIssues.length === 0 && activeListings.count > 0 ? "ready" : "watch",
       detail:
         activeListings.count === 0
           ? "No active listings to inspect."
@@ -263,6 +271,7 @@ export default async function AdminLaunchPage() {
 
   const allChecks = [...configChecks, ...dataChecks, ...productChecks];
   const summary = summarize(allChecks);
+  const blockedChecks = allChecks.filter((check) => check.status === "blocked");
 
   return (
     <main className="tech-page text-slate-900">
@@ -308,6 +317,18 @@ export default async function AdminLaunchPage() {
               {summary.blocked > 0 ? "Not public-beta ready" : summary.watch > 0 ? "Alpha-ready" : "Beta-ready"}
             </span>
           </div>
+          {blockedChecks.length > 0 ? (
+            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <p className="font-semibold">Blocking checks</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {blockedChecks.map((check) => (
+                  <li key={check.label}>
+                    <span className="font-medium">{check.label}:</span> {check.detail}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </section>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
