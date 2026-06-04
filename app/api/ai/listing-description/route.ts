@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
 
 export const runtime = "nodejs";
 
@@ -31,10 +32,14 @@ type Payload = {
 export async function POST(req: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: "AI description generation is not configured." },
-        { status: 503 }
-      );
+      const error = new Error("Missing OPENAI_API_KEY");
+      return apiErrorResponse({
+        req,
+        route: "/api/ai/listing-description",
+        status: 503,
+        error,
+        publicMessage: "AI description generation is not configured.",
+      });
     }
 
     const client = new OpenAI({
@@ -73,6 +78,13 @@ ${JSON.stringify(body, null, 2)}
 
     if (!text) {
       console.error("OpenAI returned empty response:", response);
+      await logApiError({
+        req,
+        route: "/api/ai/listing-description",
+        status: 502,
+        error: "OpenAI returned empty response",
+        metadata: { model: "gpt-4.1-mini" },
+      });
       return NextResponse.json(
         { error: "OpenAI returned empty response" },
         { status: 500 }
@@ -95,9 +107,13 @@ ${JSON.stringify(body, null, 2)}
       e?.error?.message ??
       "AI generation failed";
 
-    return NextResponse.json(
-      { error: message, status },
-      { status: typeof status === "number" && status >= 400 && status < 600 ? status : 500 }
-    );
+    return apiErrorResponse({
+      req,
+      route: "/api/ai/listing-description",
+      status: typeof status === "number" && status >= 400 && status < 600 ? status : 500,
+      error: e,
+      publicMessage: message,
+      metadata: { upstreamStatus: status },
+    });
   }
 }

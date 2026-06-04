@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logApiError } from "@/lib/api-error-logging";
 
 export async function runMatchingJob(
   req: NextRequest,
@@ -21,6 +22,17 @@ export async function runMatchingJob(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
+    await logApiError({
+      req,
+      route: new URL(req.url).pathname,
+      status: res.status,
+      error: data?.error ?? "Matching run failed.",
+      metadata: {
+        proxiedRoute: "/api/matching/run",
+        listingId: body.listingId ?? null,
+      },
+    });
+
     return NextResponse.json(
       { ok: false, error: data?.error ?? "Matching run failed." },
       { status: res.status }

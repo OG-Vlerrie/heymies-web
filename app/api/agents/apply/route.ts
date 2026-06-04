@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
@@ -27,10 +28,13 @@ export async function POST(req: Request) {
       supabase = supabaseAdmin();
     } catch (error) {
       console.error("Agent application API misconfigured:", error);
-      return NextResponse.json(
-        { ok: false, error: "Server misconfigured. Please try again later." },
-        { status: 500 }
-      );
+      return apiErrorResponse({
+        req,
+        route: "/api/agents/apply",
+        status: 500,
+        error,
+        publicMessage: "Server misconfigured. Please try again later.",
+      });
     }
 
     // Insert (or ignore if email already exists)
@@ -50,6 +54,13 @@ export async function POST(req: Request) {
     );
 
     if (insertErr) {
+      await logApiError({
+        req,
+        route: "/api/agents/apply",
+        status: 500,
+        error: insertErr,
+        metadata: { email },
+      });
       return NextResponse.json({ ok: false, error: "DB error" }, { status: 500 });
     }
 
@@ -75,13 +86,26 @@ export async function POST(req: Request) {
         });
       } catch (emailError) {
         console.error("Failed to send agent application notification:", emailError);
+        await logApiError({
+          req,
+          route: "/api/agents/apply",
+          status: 502,
+          error: emailError,
+          metadata: { stage: "email", email },
+        });
       }
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Agent application API error:", error);
-    return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
+    return apiErrorResponse({
+      req,
+      route: "/api/agents/apply",
+      status: 400,
+      error,
+      publicMessage: "Bad request",
+    });
   }
 }
 

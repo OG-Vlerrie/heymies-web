@@ -29,6 +29,16 @@ type MatchRow = {
   listing?: { title: string | null } | null;
 };
 
+type ApiErrorRow = {
+  id: string;
+  created_at: string;
+  route: string;
+  method: string;
+  status: number | null;
+  error_message: string;
+  error_code: string | null;
+};
+
 export default async function AdminHealthPage() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -78,9 +88,11 @@ export default async function AdminHealthPage() {
   let staleNurtureCount = 0;
   let activeListingsWithoutPhotos = 0;
   let oldPendingMatches = 0;
+  let recentApiErrorCount = 0;
   let recentFailures: string[] = [];
   let events: EventRow[] = [];
   let matches: MatchRow[] = [];
+  let apiErrors: ApiErrorRow[] = [];
 
   if (supabaseUrl && (serviceRole || supabaseSecret)) {
     const supabase = supabaseAdmin();
@@ -98,6 +110,8 @@ export default async function AdminHealthPage() {
       recentMatches,
       pendingMatches,
       preferenceProbe,
+      apiErrorsProbe,
+      recentApiErrors,
     ] = await Promise.all([
       safeCount(supabase.from("profiles").select("id", { count: "exact", head: true }), "profiles"),
       safeCount(supabase.from("listings").select("id", { count: "exact", head: true }), "listings"),
@@ -162,6 +176,21 @@ export default async function AdminHealthPage() {
         supabase.from("email_preferences").select("id", { count: "exact", head: true }),
         "email preferences"
       ),
+      safeCount(
+        supabase
+          .from("api_error_events")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", new Date(now - 24 * 60 * 60 * 1000).toISOString()),
+        "API errors"
+      ),
+      safeRows<ApiErrorRow>(
+        supabase
+          .from("api_error_events")
+          .select("id,created_at,route,method,status,error_message,error_code")
+          .order("created_at", { ascending: false })
+          .limit(20),
+        "recent API errors"
+      ),
     ]);
 
     dbChecks.push(
@@ -190,6 +219,8 @@ export default async function AdminHealthPage() {
     events = recentEvents.data;
     matches = normalizeRows<MatchRow>(recentMatches.data, "listing");
     oldPendingMatches = pendingMatches.count ?? 0;
+    recentApiErrorCount = apiErrorsProbe.count ?? 0;
+    apiErrors = recentApiErrors.data;
     recentFailures = events.flatMap((event) => {
       const errors = event.metadata?.errors;
       if (Array.isArray(errors) && errors.length > 0) return errors.map(String);
@@ -219,6 +250,11 @@ export default async function AdminHealthPage() {
           recentFailures.length > 0
             ? `${recentFailures.length} recent nurture-run errors found in event metadata.`
             : "No recent failure metadata found. Some provider errors may still only be in server logs.",
+      },
+      {
+        label: "API error events",
+        status: apiErrorsProbe.error ? "bad" : recentApiErrorCount > 0 ? "warn" : "ok",
+        detail: apiErrorsProbe.error ?? `${recentApiErrorCount} API errors recorded in the last 24 hours.`,
       }
     );
   } else {
@@ -260,7 +296,48 @@ export default async function AdminHealthPage() {
           <Metric label="Overall" value={statusLabel(status)} tone={status} />
           <Metric label="Due nurture" value={dueNurtureCount} tone={staleNurtureCount > 0 ? "warn" : "ok"} />
           <Metric label="Photo issues" value={activeListingsWithoutPhotos} tone={activeListingsWithoutPhotos > 0 ? "warn" : "ok"} />
-          <Metric label="Old pending matches" value={oldPendingMatches} tone={oldPendingMatches > 0 ? "warn" : "ok"} />
+          <Metric label="API errors 24h" value={recentApiErrorCount} tone={recentApiErrorCount > 0 ? "warn" : "ok"} />
+        </section>
+
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Recent API Errors</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Server-side route failures captured for Alpha debugging.
+              </p>
+            </div>
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+              {recentApiErrorCount} in 24h
+            </span>
+          </div>
+
+          {apiErrors.length === 0 ? (
+            <p className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              No API errors recorded yet.
+            </p>
+          ) : (
+            <div className="mt-5 space-y-3">
+              {apiErrors.map((event) => (
+                <div key={event.id} className="rounded-2xl border border-slate-200 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{event.route}</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {event.method} / {event.status ?? "-"} / {formatDate(event.created_at)}
+                      </p>
+                    </div>
+                    {event.error_code ? (
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                        {event.error_code}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-sm text-slate-700">{event.error_message}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="mt-8 grid gap-6 lg:grid-cols-2">

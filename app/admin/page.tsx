@@ -4,6 +4,7 @@ import Link from "next/link";
 import LeadTable from "./LeadTable";
 import AgentTable from "./AgentTable";
 import QualityPanel from "./QualityPanel";
+import { formatDateTimeZA } from "@/lib/display-format";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type Lead = {
@@ -33,6 +34,16 @@ type Agent = {
 
 type AgentRow = Record<string, any>;
 
+type ApiErrorEvent = {
+  id: string;
+  created_at: string;
+  route: string;
+  method: string;
+  status: number | null;
+  error_message: string;
+  user_id: string | null;
+};
+
 type AdminQuery<T> = {
   data: T[];
   count: number | null;
@@ -56,6 +67,8 @@ export default async function AdminPage() {
     agentReadyCount,
     dueNurtureCount,
     pausedNurtureCount,
+    apiErrorsCount,
+    apiErrorsResult,
   ] = await Promise.all([
     safeRows<Lead>(
       supabase
@@ -135,6 +148,21 @@ export default async function AdminPage() {
         .eq("nurture_status", "paused"),
       "Paused nurture"
     ),
+    safeCount(
+      supabase
+        .from("api_error_events")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+      "API errors"
+    ),
+    safeRows<ApiErrorEvent>(
+      supabase
+        .from("api_error_events")
+        .select("id,created_at,route,method,status,error_message,user_id")
+        .order("created_at", { ascending: false })
+        .limit(12),
+      "Recent API errors"
+    ),
   ]);
 
   const warnings = [
@@ -150,6 +178,8 @@ export default async function AdminPage() {
     agentReadyCount.error,
     dueNurtureCount.error,
     pausedNurtureCount.error,
+    apiErrorsCount.error,
+    apiErrorsResult.error,
   ].filter(Boolean) as string[];
 
   const leads = leadsResult.data;
@@ -229,7 +259,11 @@ export default async function AdminPage() {
           <Metric label="Total enquiries" value={enquiriesCount.count} />
           <Metric label="Agent-ready" value={agentReadyCount.count} tone="good" />
           <Metric label="Due nurture" value={dueNurtureCount.count} tone="warn" />
-          <Metric label="Paused nurture" value={pausedNurtureCount.count} tone="muted" />
+          <Metric
+            label="API errors 24h"
+            value={apiErrorsCount.count}
+            tone={(apiErrorsCount.count ?? 0) > 0 ? "bad" : "good"}
+          />
         </section>
 
         <section className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -274,9 +308,9 @@ export default async function AdminPage() {
           />
           <AdminCard
             title="System health"
-            body="Check email config, Supabase access, cron readiness, nurture backlog, and matching activity."
+            body="Check email config, Supabase access, API errors, cron readiness, nurture backlog, and matching activity."
             href="/admin/health"
-            stat="Live checks"
+            stat={`${apiErrorsCount.count ?? 0} API errors`}
           />
           <AdminCard
             title="Users"
@@ -296,6 +330,56 @@ export default async function AdminPage() {
             href="#quality"
             stat={`${activeAlerts} active alerts`}
           />
+        </section>
+
+        <section id="api-errors" className="mt-10 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">API Errors</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Recent server-side API failures captured during Alpha testing.
+              </p>
+            </div>
+            <Link href="/admin/health" className="text-sm font-semibold text-emerald-700">
+              Open health
+            </Link>
+          </div>
+
+          {apiErrorsResult.error ? (
+            <Unavailable message={apiErrorsResult.error} />
+          ) : apiErrorsResult.data.length === 0 ? (
+            <p className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              No API errors recorded yet.
+            </p>
+          ) : (
+            <div className="mt-6 overflow-auto rounded-xl border border-slate-200">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold">Time</th>
+                    <th className="px-4 py-3 text-left font-semibold">Route</th>
+                    <th className="px-4 py-3 text-left font-semibold">Status</th>
+                    <th className="px-4 py-3 text-left font-semibold">Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {apiErrorsResult.data.map((event) => (
+                    <tr key={event.id} className="border-t border-slate-200">
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                        {formatDateTimeZA(event.created_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-slate-900">{event.route}</p>
+                        <p className="text-xs text-slate-500">{event.method}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{event.status ?? "-"}</td>
+                      <td className="max-w-xl px-4 py-3 text-slate-700">{event.error_message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section id="leads" className="mt-10 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -427,13 +511,15 @@ function Metric({
 }: {
   label: string;
   value: number | null;
-  tone?: "neutral" | "good" | "warn" | "muted";
+  tone?: "neutral" | "good" | "warn" | "bad" | "muted";
 }) {
   const cls =
     tone === "good"
       ? "border-emerald-200 bg-emerald-50 text-emerald-800"
       : tone === "warn"
         ? "border-amber-200 bg-amber-50 text-amber-800"
+        : tone === "bad"
+          ? "border-red-200 bg-red-50 text-red-700"
         : tone === "muted"
           ? "border-slate-200 bg-slate-50 text-slate-700"
           : "border-sky-200 bg-sky-50 text-sky-800";

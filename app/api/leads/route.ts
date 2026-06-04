@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
@@ -23,10 +24,13 @@ export async function POST(req: Request) {
       supabase = supabaseAdmin();
     } catch (error) {
       console.error("Lead API misconfigured:", error);
-      return NextResponse.json(
-        { ok: false, error: "Server misconfigured. Please try again later." },
-        { status: 500 }
-      );
+      return apiErrorResponse({
+        req,
+        route: "/api/leads",
+        status: 500,
+        error,
+        publicMessage: "Server misconfigured. Please try again later.",
+      });
     }
 
     const { error: dbError } = await supabase
@@ -41,6 +45,13 @@ export async function POST(req: Request) {
       );
 
     if (dbError) {
+      await logApiError({
+        req,
+        route: "/api/leads",
+        status: 500,
+        error: dbError,
+        metadata: { email, source },
+      });
       return NextResponse.json(
         { ok: false, error: "DB error" },
         { status: 500 }
@@ -80,16 +91,26 @@ export async function POST(req: Request) {
         });
       } catch (emailError) {
         console.error("Failed to send lead notification email:", emailError);
+        await logApiError({
+          req,
+          route: "/api/leads",
+          status: 502,
+          error: emailError,
+          metadata: { stage: "email", email, source },
+        });
       }
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Lead API error:", error);
-    return NextResponse.json(
-      { ok: false, error: "Bad request" },
-      { status: 400 }
-    );
+    return apiErrorResponse({
+      req,
+      route: "/api/leads",
+      status: 400,
+      error,
+      publicMessage: "Bad request",
+    });
   }
 }
 

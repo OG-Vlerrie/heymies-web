@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { financeReadinessScore, hasFinanceGap } from "@/lib/buyer-finance";
 import { scoreListingForBuyer, type BuyerMatchProfile, type MatchListing } from "@/lib/matching";
 import { ensureEmailPreference } from "@/lib/email-preferences";
+import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
 
 const DEFAULT_MESSAGE =
   "Hi, I'm interested in this property and would like more information.";
@@ -87,10 +88,14 @@ export async function POST(req: NextRequest) {
 
     if (profileError) {
       console.error("Failed to load enquiry user profile:", profileError);
-      return NextResponse.json(
-        { error: `Could not load user profile: ${profileError.message}` },
-        { status: 500 }
-      );
+      return apiErrorResponse({
+        req,
+        route: "/api/enquiries",
+        status: 500,
+        error: profileError,
+        userId: user.id,
+        publicMessage: `Could not load user profile: ${profileError.message}`,
+      });
     }
 
     let profile = profileData;
@@ -111,10 +116,14 @@ export async function POST(req: NextRequest) {
 
       if (repairError) {
         console.error("Failed to repair missing enquiry user profile:", repairError);
-        return NextResponse.json(
-          { error: `Could not create user profile: ${repairError.message}` },
-          { status: 500 }
-        );
+        return apiErrorResponse({
+          req,
+          route: "/api/enquiries",
+          status: 500,
+          error: repairError,
+          userId: user?.id,
+          publicMessage: `Could not create user profile: ${repairError.message}`,
+        });
       }
 
       profile = repairedProfile;
@@ -138,7 +147,19 @@ export async function POST(req: NextRequest) {
       .eq("status", "active")
       .maybeSingle();
 
-    if (listingError || !listingData) {
+    if (listingError) {
+      await logApiError({
+        req,
+        route: "/api/enquiries",
+        status: 500,
+        error: listingError,
+        userId: user.id,
+        metadata: { listingId },
+      });
+      return NextResponse.json({ error: "Could not load listing" }, { status: 500 });
+    }
+
+    if (!listingData) {
       return NextResponse.json({ error: "Listing not found" }, { status: 404 });
     }
 
@@ -244,6 +265,14 @@ export async function POST(req: NextRequest) {
     }) {
       if (!resend) {
         console.error("Skipping enquiry email because RESEND_API_KEY is not configured.");
+        await logApiError({
+          req,
+          route: "/api/enquiries",
+          status: 503,
+          error: "RESEND_API_KEY is not configured",
+          userId: user?.id,
+          metadata: { stage: "agent_email", listingId },
+        });
         return;
       }
 
@@ -297,6 +326,14 @@ export async function POST(req: NextRequest) {
         });
       } catch (emailError) {
         console.error("Failed to send enquiry email:", emailError);
+        await logApiError({
+          req,
+          route: "/api/enquiries",
+          status: 502,
+          error: emailError,
+          userId: user?.id,
+          metadata: { stage: "agent_email", listingId },
+        });
       }
     }
 
@@ -311,6 +348,14 @@ export async function POST(req: NextRequest) {
       if (!email) return;
       if (!resend) {
         console.error("Skipping buyer nurture email because RESEND_API_KEY is not configured.");
+        await logApiError({
+          req,
+          route: "/api/enquiries",
+          status: 503,
+          error: "RESEND_API_KEY is not configured",
+          userId: user?.id,
+          metadata: { stage: "buyer_nurture_email", listingId },
+        });
         return;
       }
 
@@ -398,6 +443,14 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (insertError || !inserted) {
+        await logApiError({
+          req,
+          route: "/api/enquiries",
+          status: 500,
+          error: insertError ?? "Enquiry insert returned no row",
+          userId: user.id,
+          metadata: { stage: "create_enquiry", listingId },
+        });
         return NextResponse.json(
           { error: "Could not create enquiry" },
           { status: 500 }
@@ -481,6 +534,14 @@ export async function POST(req: NextRequest) {
       .eq("id", existing.id);
 
     if (updateError) {
+      await logApiError({
+        req,
+        route: "/api/enquiries",
+        status: 500,
+        error: updateError,
+        userId: user.id,
+        metadata: { stage: "update_enquiry", listingId, enquiryId: existing.id },
+      });
       return NextResponse.json(
         { error: "Could not update enquiry" },
         { status: 500 }
@@ -531,10 +592,13 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Enquiry route error:", error);
 
-    return NextResponse.json(
-      { error: "Unexpected server error" },
-      { status: 500 }
-    );
+    return apiErrorResponse({
+      req,
+      route: "/api/enquiries",
+      status: 500,
+      error,
+      publicMessage: "Unexpected server error",
+    });
   }
 }
 

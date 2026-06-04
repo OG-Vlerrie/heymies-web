@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ensureEmailPreference } from "@/lib/email-preferences";
+import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
 
 type QualificationStatus =
   | "agent_ready"
@@ -114,7 +115,14 @@ async function run(req: NextRequest) {
   const { data, error } = await query;
 
   if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return apiErrorResponse({
+      req,
+      route: "/api/nurture/run",
+      status: 500,
+      error,
+      publicMessage: error.message,
+      metadata: { stage: "load_due_enquiries", enquiryId: enquiryId || null },
+    });
   }
 
   const enquiries = ((data ?? []) as unknown as DueEnquiry[]).map((enquiry) => ({
@@ -206,6 +214,14 @@ async function run(req: NextRequest) {
 
       if (updateError) {
         errors.push(`Failed to update enquiry ${enquiry.id}: ${updateError.message}`);
+        await logApiError({
+          req,
+          route: "/api/nurture/run",
+          status: 500,
+          error: updateError,
+          userId: enquiry.user_id,
+          metadata: { stage: "update_after_nurture", enquiryId: enquiry.id },
+        });
         continue;
       }
 
@@ -422,6 +438,13 @@ async function sendNurtureEmail({
 }) {
   if (!resend) {
     console.error("Skipping scheduled nurture email because RESEND_API_KEY is not configured.");
+    await logApiError({
+      route: "/api/nurture/run",
+      status: 503,
+      error: "RESEND_API_KEY is not configured",
+      userId: enquiry.user_id,
+      metadata: { stage: "scheduled_nurture_email", enquiryId: enquiry.id },
+    });
     return false;
   }
 
@@ -468,12 +491,26 @@ async function sendNurtureEmail({
 
     if (response.error) {
       console.error("Failed to send scheduled nurture email:", response.error);
+      await logApiError({
+        route: "/api/nurture/run",
+        status: 502,
+        error: response.error,
+        userId: enquiry.user_id,
+        metadata: { stage: "scheduled_nurture_email", enquiryId: enquiry.id },
+      });
       return false;
     }
 
     return true;
   } catch (error) {
     console.error("Failed to send scheduled nurture email:", error);
+    await logApiError({
+      route: "/api/nurture/run",
+      status: 502,
+      error,
+      userId: enquiry.user_id,
+      metadata: { stage: "scheduled_nurture_email", enquiryId: enquiry.id },
+    });
     return false;
   }
 }

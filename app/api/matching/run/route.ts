@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resend } from "@/lib/resend";
 import { ensureEmailPreference } from "@/lib/email-preferences";
 import { buyerMatchLabel } from "@/lib/match-labels";
+import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
 
 type BuyerAlert = {
   id: string;
@@ -67,11 +68,23 @@ export async function POST(req: Request) {
     ]);
 
   if (listingsErr) {
-    return NextResponse.json({ ok: false, error: listingsErr.message }, { status: 500 });
+    return apiErrorResponse({
+      req,
+      route: "/api/matching/run",
+      status: 500,
+      error: listingsErr,
+      publicMessage: listingsErr.message,
+    });
   }
 
   if (alertsErr) {
-    return NextResponse.json({ ok: false, error: alertsErr.message }, { status: 500 });
+    return apiErrorResponse({
+      req,
+      route: "/api/matching/run",
+      status: 500,
+      error: alertsErr,
+      publicMessage: alertsErr.message,
+    });
   }
 
   const events = [];
@@ -111,7 +124,14 @@ export async function POST(req: Request) {
       .upsert(events, { onConflict: "buyer_alert_id,listing_id", ignoreDuplicates: true });
 
     if (insertErr) {
-      return NextResponse.json({ ok: false, error: insertErr.message }, { status: 500 });
+      return apiErrorResponse({
+        req,
+        route: "/api/matching/run",
+        status: 500,
+        error: insertErr,
+        publicMessage: insertErr.message,
+        metadata: { stage: "insert_match_events", eventCount: events.length },
+      });
     }
   }
 
@@ -140,7 +160,14 @@ export async function POST(req: Request) {
       .limit(200);
 
     if (pendingErr) {
-      return NextResponse.json({ ok: false, error: pendingErr.message }, { status: 500 });
+      return apiErrorResponse({
+        req,
+        route: "/api/matching/run",
+        status: 500,
+        error: pendingErr,
+        publicMessage: pendingErr.message,
+        metadata: { stage: "load_pending_match_events" },
+      });
     }
 
     for (const event of pendingEvents ?? []) {
@@ -241,6 +268,13 @@ async function sendMatchEmail({
   if (!preferences.allowed) return false;
   if (!resend) {
     console.error("Skipping match email because RESEND_API_KEY is not configured.");
+    await logApiError({
+      route: "/api/matching/run",
+      status: 503,
+      error: "RESEND_API_KEY is not configured",
+      userId,
+      metadata: { stage: "match_email", listingId: listing.id },
+    });
     return false;
   }
 
@@ -279,12 +313,26 @@ async function sendMatchEmail({
 
     if (response.error) {
       console.error("Failed to send match email:", response.error);
+      await logApiError({
+        route: "/api/matching/run",
+        status: 502,
+        error: response.error,
+        userId,
+        metadata: { stage: "match_email", listingId: listing.id },
+      });
       return false;
     }
 
     return true;
   } catch (error) {
     console.error("Failed to send match email:", error);
+    await logApiError({
+      route: "/api/matching/run",
+      status: 502,
+      error,
+      userId,
+      metadata: { stage: "match_email", listingId: listing.id },
+    });
     return false;
   }
 }
