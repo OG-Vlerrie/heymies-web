@@ -34,7 +34,11 @@ type ListingHealthRow = {
 export default async function AdminLaunchPage() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ?? "";
+  const serviceRole = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    ""
+  ).trim();
   const resendKey = process.env.RESEND_API_KEY?.trim() ?? "";
   const emailFrom = process.env.EMAIL_FROM?.trim() ?? "";
   const openAiKey = process.env.OPENAI_API_KEY?.trim() ?? "";
@@ -381,11 +385,14 @@ function tableCheck(
   action: string
 ): ReadinessCheck {
   if (result.error) {
+    const isNotChecked = result.error === "Not checked.";
     return {
       label,
       status: "blocked",
       detail: result.error,
-      action: "Apply the required Supabase migration and recheck this page.",
+      action: isNotChecked
+        ? "Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY in production, then redeploy and recheck."
+        : `Database returned: ${result.error}`,
     };
   }
 
