@@ -33,26 +33,28 @@ export async function POST(req: Request) {
       });
     }
 
-    const dbError = await saveLead(supabase, {
-      email,
-      source,
-      tag: tag || (source.includes("contact") ? "contact" : null),
-    });
-
-    if (dbError) {
-      await logApiError({
-        req,
-        route: "/api/leads",
-        status: 500,
-        error: dbError,
-        metadata: { email, source },
+    if (shouldAttemptLeadStorage(source)) {
+      const dbError = await saveLead(supabase, {
+        email,
+        source,
+        tag: tag || (source.includes("contact") ? "contact" : null),
       });
 
-      if (!canContinueWithoutLeadStorage(dbError)) {
-        return NextResponse.json(
-          { ok: false, error: "DB error" },
-          { status: 500 }
-        );
+      if (dbError) {
+        await logApiError({
+          req,
+          route: "/api/leads",
+          status: 500,
+          error: dbError,
+          metadata: { email, source },
+        });
+
+        if (!canContinueWithoutLeadStorage(dbError)) {
+          return NextResponse.json(
+            { ok: false, error: "DB error" },
+            { status: 500 }
+          );
+        }
       }
     }
 
@@ -195,4 +197,13 @@ function canContinueWithoutLeadStorage(error: { code?: string; message?: string 
       error.message?.includes("agent_id") &&
       error.message?.includes("leads"))
   );
+}
+
+function shouldAttemptLeadStorage(source: string) {
+  return !new Set([
+    "website",
+    "homepage-cta",
+    "contact-page",
+    "landing-demo-form",
+  ]).has(source);
 }
