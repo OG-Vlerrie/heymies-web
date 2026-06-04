@@ -144,9 +144,9 @@ export default function AdminListingsTable({ initialListings }: { initialListing
               <tr key={listing.id} className="border-t border-slate-200 align-top">
                 <td className="px-4 py-3">
                   <div className="flex min-w-72 gap-3">
-                    {listing.cover_image ? (
+                    {listingImage(listing) ? (
                       <img
-                        src={listing.cover_image}
+                        src={listingImage(listing)!}
                         alt={listing.title ?? "Listing"}
                         className="h-16 w-20 rounded-xl object-cover"
                       />
@@ -260,6 +260,10 @@ export default function AdminListingsTable({ initialListings }: { initialListing
 
 function imageCount(listing: Listing) {
   return Array.isArray(listing.images) ? listing.images.length : 0;
+}
+
+function listingImage(listing: Listing) {
+  return listing.cover_image || listing.images?.find(Boolean) || null;
 }
 
 function StatusPill({ status }: { status: string }) {

@@ -151,6 +151,7 @@ export default function EditListingPage() {
 
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [newPreviews, setNewPreviews] = useState<string[]>([]);
+  const [newCoverIndex, setNewCoverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!listingId) return;
@@ -320,7 +321,13 @@ export default function EditListingPage() {
     const toAdd = picked.slice(0, allowed);
     if (toAdd.length === 0) return;
 
-    setNewFiles((prev) => [...prev, ...toAdd]);
+    setNewFiles((prev) => {
+      if (!coverImage && existingImages.length === 0 && newCoverIndex === null) {
+        setNewCoverIndex(prev.length);
+      }
+
+      return [...prev, ...toAdd];
+    });
 
     const next = toAdd.map((f) => URL.createObjectURL(f));
     setNewPreviews((prev) => [...prev, ...next]);
@@ -328,6 +335,12 @@ export default function EditListingPage() {
 
   function removeNewImage(idx: number) {
     setNewFiles((prev) => prev.filter((_, i) => i !== idx));
+    setNewCoverIndex((current) => {
+      if (current === null) return null;
+      if (current === idx) return null;
+      if (current > idx) return current - 1;
+      return current;
+    });
     setNewPreviews((prev) => {
       const copy = [...prev];
       const [removed] = copy.splice(idx, 1);
@@ -351,6 +364,11 @@ export default function EditListingPage() {
 
   function setAsCover(url: string) {
     setCoverImage(url);
+    setNewCoverIndex(null);
+  }
+
+  function setNewAsCover(idx: number) {
+    setNewCoverIndex(idx);
   }
 
   async function uploadNewImages(uid: string, lid: string) {
@@ -408,9 +426,11 @@ export default function EditListingPage() {
       const mergedImages = [...existingImages, ...uploaded];
 
       const finalCover =
-        coverImage && mergedImages.includes(coverImage)
-          ? coverImage
-          : mergedImages[0] ?? null;
+        newCoverIndex !== null && uploaded[newCoverIndex]
+          ? uploaded[newCoverIndex]
+          : coverImage && mergedImages.includes(coverImage)
+            ? coverImage
+            : mergedImages[0] ?? null;
 
       if (nextStatus === "active" && mergedImages.length === 0) {
         setSaving(false);
@@ -500,6 +520,7 @@ export default function EditListingPage() {
       if (!updatedListing) throw new Error("Listing update did not return the updated row.");
 
       setNewFiles([]);
+      setNewCoverIndex(null);
       setNewPreviews((prev) => {
         prev.forEach((u) => URL.revokeObjectURL(u));
         return [];
@@ -673,13 +694,22 @@ export default function EditListingPage() {
               <p className="text-sm font-semibold text-slate-900">Add new images</p>
               <p className="mt-1 text-xs text-slate-600">Max 50 total images (existing + new).</p>
 
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => onPickImages(e.target.files)}
-                className="mt-3 block w-full text-sm text-slate-900"
-              />
+              <div className="mt-3">
+                <label
+                  htmlFor="edit-listing-photos"
+                  className="inline-flex cursor-pointer rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Add Photos
+                </label>
+                <input
+                  id="edit-listing-photos"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => onPickImages(e.target.files)}
+                  className="sr-only"
+                />
+              </div>
 
               {newPreviews.length > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -689,12 +719,24 @@ export default function EditListingPage() {
                       className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white"
                     >
                       <img src={src} alt="New preview" className="h-28 w-full object-cover" />
+                      {newCoverIndex === idx ? (
+                        <span className="absolute left-2 top-2 rounded-lg bg-emerald-700 px-2 py-1 text-xs text-white">
+                          Cover
+                        </span>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => removeNewImage(idx)}
                         className="absolute right-2 top-2 rounded-lg bg-white/90 px-2 py-1 text-xs font-semibold"
                       >
                         Remove
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewAsCover(idx)}
+                        className="absolute bottom-2 left-2 right-2 rounded-lg bg-white/90 px-2 py-1 text-xs font-semibold"
+                      >
+                        {newCoverIndex === idx ? "Cover photo" : "Set as cover"}
                       </button>
                     </div>
                   ))}

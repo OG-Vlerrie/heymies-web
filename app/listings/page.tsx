@@ -18,7 +18,7 @@ export default async function ListingsPage() {
     const { data, error: loadErr } = await supabasePublic()
       .from("listings")
       .select(
-        "id, title, suburb, city, price, price_per_month, sale_type, listing_type, bedrooms, bathrooms, parking, cover_image, status, created_at"
+        "id, title, suburb, city, price, price_per_month, sale_type, listing_type, bedrooms, bathrooms, parking, cover_image, images, status, created_at"
       )
       .eq("status", "active")
       .order("created_at", { ascending: false })

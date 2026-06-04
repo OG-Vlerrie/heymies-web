@@ -17,6 +17,7 @@ type Listing = {
   status: string;
   created_at: string;
   cover_image: string | null;
+  images: string[] | null;
 };
 
 function formatListingPrice(listing: Listing) {
@@ -25,6 +26,10 @@ function formatListingPrice(listing: Listing) {
 
   const formatted = `R ${Number(value).toLocaleString("en-ZA")}`;
   return listing.sale_type === "rent" ? `${formatted} / month` : formatted;
+}
+
+function listingImage(listing: Listing) {
+  return listing.cover_image || listing.images?.find(Boolean) || null;
 }
 
 type Profile = {
@@ -54,7 +59,7 @@ export default function ListingsPage() {
 
       const { data, error: lErr } = await supabase
   .from("listings")
-  .select("id, title, price, price_per_month, sale_type, suburb, city, status, created_at, cover_image")
+  .select("id, title, price, price_per_month, sale_type, suburb, city, status, created_at, cover_image, images")
   .eq("agent_id", user.id)
   .neq("status", "inactive")
   .order("created_at", { ascending: false })
@@ -118,9 +123,9 @@ export default function ListingsPage() {
                 <div className="flex items-center justify-between gap-4">
   <div className="flex items-center gap-4">
     <div className="h-14 w-20 overflow-hidden rounded-xl border bg-slate-50">
-      {l.cover_image ? (
+      {listingImage(l) ? (
         <img
-          src={l.cover_image}
+          src={listingImage(l)!}
           alt={l.title}
           className="h-full w-full object-cover"
           loading="lazy"

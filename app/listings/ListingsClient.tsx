@@ -20,6 +20,7 @@ export type PublicListing = {
   bathrooms: number | null;
   parking: number | null;
   cover_image: string | null;
+  images: string[] | null;
   status: string | null;
   created_at: string;
 };
@@ -56,7 +57,7 @@ export default function ListingsClient({
       const { data, error: loadErr } = await supabase
         .from("listings")
         .select(
-          "id, title, suburb, city, price, price_per_month, sale_type, listing_type, bedrooms, bathrooms, parking, cover_image, status, created_at"
+          "id, title, suburb, city, price, price_per_month, sale_type, listing_type, bedrooms, bathrooms, parking, cover_image, images, status, created_at"
         )
         .eq("status", "active")
         .order("created_at", { ascending: false })
@@ -202,15 +203,16 @@ export default function ListingsClient({
 function ListingCard({ listing }: { listing: PublicListing }) {
   const isRent = listing.sale_type === "rent";
   const price = isRent ? listing.price_per_month : listing.price;
+  const image = listing.cover_image || listing.images?.find(Boolean) || null;
 
   return (
     <div className="relative">
       <Link href={`/listings/${listing.id}`} className="block">
         <div className="tech-card rounded-3xl p-5 transition">
-          {listing.cover_image ? (
+          {image ? (
             <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
               <img
-                src={listing.cover_image}
+                src={image}
                 alt={listing.title}
                 className="h-44 w-full object-cover"
                 loading="lazy"

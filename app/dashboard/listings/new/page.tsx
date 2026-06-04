@@ -387,18 +387,18 @@ export default function NewListingPage() {
   function onPickImages(selected: FileList | null) {
     if (!selected) return;
 
+    const allowed = Math.max(0, MAX_LISTING_IMAGES - files.length);
     const picked = Array.from(selected)
       .filter((f) => f.type.startsWith("image/"))
-      .slice(0, MAX_LISTING_IMAGES);
+      .slice(0, allowed);
+    if (picked.length === 0) return;
 
-    setFiles(picked);
-    setCoverIndex(0);
+    const hadFiles = files.length > 0;
+    setFiles((prev) => [...prev, ...picked]);
+    if (!hadFiles) setCoverIndex(0);
 
     const nextPreviews = picked.map((f) => URL.createObjectURL(f));
-    setPreviews((prev) => {
-      prev.forEach((u) => URL.revokeObjectURL(u));
-      return nextPreviews;
-    });
+    setPreviews((prev) => [...prev, ...nextPreviews]);
   }
 
   function removeImage(idx: number) {
@@ -640,7 +640,7 @@ export default function NewListingPage() {
 
         title: title.trim(),
         description: finalDescription || null,
-        status: "active",
+        status: "draft",
 
         sale_type: saleType,
         listing_type: listingType,
@@ -694,7 +694,10 @@ export default function NewListingPage() {
     try {
       const { urls, cover } = await uploadImages(user.id, listingId);
 
-      const { error: upErr } = await supabase.from("listings").update({ images: urls, cover_image: cover }).eq("id", listingId);
+      const { error: upErr } = await supabase
+        .from("listings")
+        .update({ images: urls, cover_image: cover, status: "active" })
+        .eq("id", listingId);
       if (upErr) throw upErr;
 
       const { data: sessionRes } = await supabase.auth.getSession();
