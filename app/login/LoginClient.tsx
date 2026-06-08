@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -17,6 +17,36 @@ export default function LoginClient() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        if (!cancelled) setCheckingSession(false);
+        return;
+      }
+
+      if (session.access_token) {
+        await createAdminSession(session.access_token);
+      }
+
+      if (!cancelled) {
+        redirectAfterLogin();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // The redirect helper intentionally reads localStorage at navigation time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safeNext, supabase]);
 
   async function onLogin() {
     setError(null);
@@ -34,16 +64,14 @@ export default function LoginClient() {
     }
 
     if (loginData.session?.access_token) {
-      await fetch("/api/auth/admin-session", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${loginData.session.access_token}`,
-        },
-      }).catch(() => null);
+      await createAdminSession(loginData.session.access_token);
     }
 
     setLoading(false);
+    redirectAfterLogin();
+  }
 
+  function redirectAfterLogin() {
     const fallbackNext =
       typeof window !== "undefined"
         ? localStorage.getItem("auth_redirect_after_verify")
@@ -54,7 +82,7 @@ export default function LoginClient() {
       localStorage.removeItem("auth_redirect_after_verify");
     }
 
-    router.push(safeNext || safeFallbackNext || "/dashboard");
+    router.replace(safeNext || safeFallbackNext || "/dashboard");
   }
 
   return (
@@ -84,11 +112,14 @@ export default function LoginClient() {
             />
 
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {checkingSession && (
+              <p className="text-sm text-slate-600">Checking your verification status...</p>
+            )}
 
             <button
               className="tech-button-primary w-full rounded-xl p-3 text-sm font-semibold disabled:opacity-60"
               onClick={onLogin}
-              disabled={loading}
+              disabled={loading || checkingSession}
             >
               {loading ? "Signing in..." : "Log in"}
             </button>
@@ -111,6 +142,15 @@ export default function LoginClient() {
       </div>
     </main>
   );
+}
+
+async function createAdminSession(accessToken: string) {
+  await fetch("/api/auth/admin-session", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  }).catch(() => null);
 }
 
 function safeRedirectPath(value: string | null) {
