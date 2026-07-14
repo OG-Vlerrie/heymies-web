@@ -7,6 +7,7 @@ type Status = "idle" | "loading" | "ok" | "error";
 export default function ContactForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [notice, setNotice] = useState("");
@@ -23,6 +24,7 @@ export default function ContactForm() {
         body: JSON.stringify({
           full_name: fullName,
           email,
+          phone,
           message,
           source: "contact-page",
           tag: "contact",
@@ -40,6 +42,7 @@ export default function ContactForm() {
       setNotice("Message received. We'll come back to you soon.");
       setFullName("");
       setEmail("");
+      setPhone("");
       setMessage("");
     } catch {
       setStatus("error");
@@ -63,6 +66,14 @@ export default function ContactForm() {
         required
         value={email}
         onChange={(event) => setEmail(event.target.value)}
+        className="tech-input w-full rounded-xl px-4 py-3 text-sm"
+      />
+      <input
+        type="tel"
+        placeholder="Phone number"
+        autoComplete="tel"
+        value={phone}
+        onChange={(event) => setPhone(event.target.value)}
         className="tech-input w-full rounded-xl px-4 py-3 text-sm"
       />
       <textarea

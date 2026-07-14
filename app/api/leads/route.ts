@@ -23,21 +23,21 @@ export async function POST(req: Request) {
       );
     }
 
-    let supabase;
-    try {
-      supabase = supabaseAdmin();
-    } catch (error) {
-      console.error("Lead API misconfigured:", error);
-      return apiErrorResponse({
-        req,
-        route: "/api/leads",
-        status: 500,
-        error,
-        publicMessage: "Server misconfigured. Please try again later.",
-      });
-    }
-
     if (shouldAttemptLeadStorage(source)) {
+      let supabase;
+      try {
+        supabase = supabaseAdmin();
+      } catch (error) {
+        console.error("Lead API misconfigured:", error);
+        return apiErrorResponse({
+          req,
+          route: "/api/leads",
+          status: 500,
+          error,
+          publicMessage: "Server misconfigured. Please try again later.",
+        });
+      }
+
       const dbError = await saveLead(supabase, {
         email,
         source,
@@ -63,10 +63,12 @@ export async function POST(req: Request) {
     }
 
     const isDemoRequest = tag === "demo" || source.includes("demo");
+    const isContactRequest = tag === "contact" || source.includes("contact");
 
-    if (isDemoRequest) {
+    if (isDemoRequest || isContactRequest) {
       try {
         const emailResult = await sendDemoLeadEmails({
+          kind: isContactRequest ? "contact" : "demo",
           name: fullName,
           agencyName,
           email,
@@ -77,24 +79,51 @@ export async function POST(req: Request) {
         });
 
         if (!emailResult.ok) {
-          console.error("Failed to send demo lead email:", emailResult.errors);
+          const internalDeliveryFailed = emailResult.errors.some(
+            (error) => error.target === "config" || error.target === "internal"
+          );
+
+          console.error("Failed to send lead email:", emailResult.errors);
           await logApiError({
             req,
             route: "/api/leads",
             status: 502,
-            error: new Error("Failed to send demo lead email"),
-            metadata: { stage: "demo-email", email, source: leadSource, errors: emailResult.errors },
+            error: new Error("Failed to send lead email"),
+            metadata: {
+              stage: isContactRequest ? "contact-email" : "demo-email",
+              email,
+              source: leadSource,
+              errors: emailResult.errors,
+            },
           });
+
+          if (isContactRequest && internalDeliveryFailed) {
+            return NextResponse.json(
+              { ok: false, error: "Could not send your message. Please email us directly." },
+              { status: 502 }
+            );
+          }
         }
       } catch (emailError) {
-        console.error("Failed to send demo lead email:", emailError);
+        console.error("Failed to send lead email:", emailError);
         await logApiError({
           req,
           route: "/api/leads",
           status: 502,
           error: emailError,
-          metadata: { stage: "demo-email", email, source: leadSource },
+          metadata: {
+            stage: isContactRequest ? "contact-email" : "demo-email",
+            email,
+            source: leadSource,
+          },
         });
+
+        if (isContactRequest) {
+          return NextResponse.json(
+            { ok: false, error: "Could not send your message. Please email us directly." },
+            { status: 502 }
+          );
+        }
       }
     }
 

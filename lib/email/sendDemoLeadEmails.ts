@@ -2,6 +2,7 @@ import type { CreateEmailResponse } from "resend";
 import { resend } from "@/lib/resend";
 
 type DemoLeadEmailInput = {
+  kind?: "demo" | "contact";
   name: string;
   agencyName: string;
   email: string;
@@ -23,6 +24,7 @@ export type DemoLeadEmailResult = {
 };
 
 export async function sendDemoLeadEmails({
+  kind = "demo",
   name,
   agencyName,
   email,
@@ -34,7 +36,27 @@ export async function sendDemoLeadEmails({
 }: DemoLeadEmailInput): Promise<DemoLeadEmailResult> {
   const errors: EmailSendError[] = [];
   const from = process.env.EMAIL_FROM?.trim();
-  const internalEmail = process.env.INTERNAL_LEADS_EMAIL?.trim();
+  const internalEmail = process.env.INTERNAL_LEADS_EMAIL?.trim() || "gerhard@vertacore.co.za";
+  const isContact = kind === "contact";
+  const internalSubject = isContact
+    ? "New HeyMies contact message"
+    : "New HeyMies demo lead";
+  const confirmationSubject = isContact
+    ? "Mia received your HeyMies message"
+    : "Mia received your HeyMies request";
+  const greeting = firstName(name) ? `Hi ${firstName(name)},` : "Hi,";
+  const confirmationParagraphs = isContact
+    ? [
+        greeting,
+        "Thanks for reaching out to HeyMies. I've received your message and passed it on to Gerhard so he can come back to you personally.",
+        "If there is anything extra you want to add before then, you can reply to this email and it will go straight to Gerhard.",
+      ]
+    : [
+        greeting,
+        "Thanks for your interest in HeyMies. I've received your request and shared it with the team so we can help you take the next step.",
+        "We'll come back to you shortly with a practical way to see how HeyMies can support your buyer, seller, or agent workflow.",
+      ];
+  const confirmationText = [...confirmationParagraphs, "Warmly,\nMia from HeyMies"].join("\n\n");
 
   if (!resend) {
     return {
@@ -58,31 +80,36 @@ export async function sendDemoLeadEmails({
   }
 
   try {
+    const fields = [
+      ["Name", field(name)],
+      ...(isContact ? [] : [["Agency name", field(agencyName)]]),
+      ["Email", field(email)],
+      ["Phone", field(phone)],
+      ...(isContact ? [] : [["City", field(city)]]),
+      ["Source", field(source)],
+    ];
+
     const result = await resend.emails.send({
       from,
       to: [internalEmail],
-      subject: "New HeyMies demo lead",
+      replyTo: email,
+      subject: internalSubject,
       text: [
-        "New HeyMies demo lead",
+        internalSubject,
         "",
-        `Name: ${field(name)}`,
-        `Agency name: ${field(agencyName)}`,
-        `Email: ${field(email)}`,
-        `Phone: ${field(phone)}`,
-        `City: ${field(city)}`,
-        `Source: ${field(source)}`,
+        ...fields.map(([label, value]) => `${label}: ${value}`),
         "",
         "Message:",
         field(message),
       ].join("\n"),
       html: `
-        <h2>New HeyMies demo lead</h2>
-        <p><strong>Name:</strong> ${escapeHtml(field(name))}</p>
-        <p><strong>Agency name:</strong> ${escapeHtml(field(agencyName))}</p>
-        <p><strong>Email:</strong> ${escapeHtml(field(email))}</p>
-        <p><strong>Phone:</strong> ${escapeHtml(field(phone))}</p>
-        <p><strong>City:</strong> ${escapeHtml(field(city))}</p>
-        <p><strong>Source:</strong> ${escapeHtml(field(source))}</p>
+        <h2>${escapeHtml(internalSubject)}</h2>
+        ${fields
+          .map(
+            ([label, value]) =>
+              `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`
+          )
+          .join("")}
         <p><strong>Message:</strong><br />${escapeHtml(field(message)).replaceAll("\n", "<br />")}</p>
       `,
     });
@@ -98,12 +125,14 @@ export async function sendDemoLeadEmails({
       const result = await resend.emails.send({
         from,
         to: [email],
-        subject: "Thanks for your interest in HeyMies",
-        text:
-          "Thanks for reaching out. We'll contact you shortly to show you how HeyMies helps agents identify and nurture serious buyers.",
+        replyTo: internalEmail,
+        subject: confirmationSubject,
+        text: confirmationText,
         html: `
-          <p>Thanks for reaching out. We'll contact you shortly to show you how HeyMies helps agents identify and nurture serious buyers.</p>
-          <p><strong>HeyMies</strong></p>
+          ${confirmationParagraphs
+            .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+            .join("")}
+          <p>Warmly,<br /><strong>Mia from HeyMies</strong></p>
         `,
       });
 
@@ -124,10 +153,14 @@ function field(value: string) {
   return value.trim() || "-";
 }
 
+function firstName(value: string) {
+  return value.trim().split(/\s+/)[0] ?? "";
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === "string" && error.trim()) return error;
-  return "Failed to send demo lead email.";
+  return "Failed to send lead email.";
 }
 
 function responseError(result: CreateEmailResponse) {

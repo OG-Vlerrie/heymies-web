@@ -40,18 +40,30 @@ export default function HowItWorksPage() {
       <TechSection title="What Mia decides">
         <div className="grid gap-5 md:grid-cols-2">
           <TechCard>
-            <h2 className="text-xl font-semibold">Ready for handover</h2>
+            <h2 className="text-xl font-semibold">Ready for an agent conversation</h2>
             <p className="mt-3 leading-7 text-slate-700">
-              If the buyer has strong property fit, intent, and readiness, the agent gets
-              the enquiry with contact details, Mia's read, and a suggested next action.
+              Mia only moves a buyer forward when the enquiry has enough context for a
+              useful first call. That means the property looks like a strong fit, the
+              buyer has shown clear intent, and the next step is obvious.
             </p>
+            <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+              <li>The agent receives the buyer's contact details.</li>
+              <li>Mia includes a short summary of readiness, fit, and finance signals.</li>
+              <li>The handover includes a recommended next action, such as call, confirm viewing, or check finance.</li>
+            </ul>
           </TechCard>
           <TechCard>
             <h2 className="text-xl font-semibold">Needs nurture first</h2>
             <p className="mt-3 leading-7 text-slate-700">
-              If finance, timing, or fit is unclear, Mia asks a simple question by email
-              and records the response before involving the agent.
+              When the buyer is interested but not quite ready for a useful agent call,
+              Mia keeps the conversation warm instead of pushing the enquiry through too
+              early. The goal is to clear up the missing context first.
             </p>
+            <ul className="mt-4 space-y-2 text-sm leading-6 text-slate-700">
+              <li>Mia asks a focused follow-up about finance, timing, intent, or property fit.</li>
+              <li>The buyer's response is recorded against the enquiry for future context.</li>
+              <li>The agent only gets involved once the next step is clearer or the buyer asks for contact.</li>
+            </ul>
           </TechCard>
         </div>
       </TechSection>
