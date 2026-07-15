@@ -467,6 +467,7 @@ async function sendNurtureEmail({
     const response = await resend.emails.send({
       from: process.env.EMAIL_FROM?.trim() || "Mia from HeyMies <mia@heymies.co.za>",
       to,
+      replyTo: miaReplyToEmail(),
       subject: message.subject,
       html: `
         <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
@@ -526,6 +527,10 @@ function requestOrigin(req: NextRequest) {
 
   if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
   return url.origin;
+}
+
+function miaReplyToEmail() {
+  return process.env.MIA_REPLY_TO_EMAIL?.trim() || "mia@heymies.co.za";
 }
 
 function escapeHtml(input: string) {

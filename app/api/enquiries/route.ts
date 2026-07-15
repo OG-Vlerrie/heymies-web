@@ -387,6 +387,7 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from: process.env.EMAIL_FROM?.trim() || "HeyMies <no-reply@heymies.co.za>",
           to: email,
+          replyTo: miaReplyToEmail(),
           subject: params.subject,
           html: `
             <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
@@ -869,6 +870,10 @@ function requestOrigin(req: NextRequest) {
   }
 
   return url.origin;
+}
+
+function miaReplyToEmail() {
+  return process.env.MIA_REPLY_TO_EMAIL?.trim() || "mia@heymies.co.za";
 }
 
 function responseUpdateForAction(
