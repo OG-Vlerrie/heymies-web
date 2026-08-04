@@ -157,8 +157,30 @@ function oneRelated<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value ?? undefined;
 }
 
-function getBuyerAreas(buyer: Buyer | null) {
-  return buyer?.areas?.length ? buyer.areas : buyer?.areas_multi ?? [];
+function normalizeTextArray(value: unknown) {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+
+  if (typeof value !== "string") return [];
+
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    return trimmed
+      .slice(1, -1)
+      .split(",")
+      .map((item) => item.trim().replace(/^"|"$/g, ""))
+      .filter(Boolean);
+  }
+
+  return [trimmed];
+}
+
+function getBuyerAreas(buyer: { areas?: unknown; areas_multi?: unknown } | null) {
+  const areasMulti = normalizeTextArray(buyer?.areas_multi);
+  if (areasMulti.length > 0) return areasMulti;
+
+  return normalizeTextArray(buyer?.areas);
 }
 
 /* ----------------------------- Page ----------------------------- */
@@ -555,6 +577,27 @@ export default function BuyerDashboardPage() {
 
             <div className="mt-6 grid gap-6 md:grid-cols-3">
               <div className="space-y-6 md:col-span-2">
+                <SectionCard title="Recommended properties" subtitle="Scored against your preferences.">
+                  {recommendations.length === 0 ? (
+                    <EmptyState
+                      title="No matches yet"
+                      description="Add budget, areas, and property types to unlock better recommendations."
+                      ctaHref="/dashboard/buyer/profile"
+                      ctaText="Edit preferences"
+                    />
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {recommendations.map((listing) => (
+                        <RecommendationCard
+                          key={listing.id}
+                          listing={listing}
+                          onSaved={refreshAll}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </SectionCard>
+
                 <SectionCard
                   title="Saved properties"
                   subtitle="Your shortlist. Keep it tight."
@@ -746,27 +789,6 @@ export default function BuyerDashboardPage() {
                     hasSaved={saved.length > 0}
                     hasEnquiries={enquiries.length > 0}
                   />
-                </SectionCard>
-
-                <SectionCard title="Recommended" subtitle="Scored against your preferences.">
-                  {recommendations.length === 0 ? (
-                    <EmptyState
-                      title="No matches yet"
-                      description="Add budget, areas, and property types to unlock better recommendations."
-                      ctaHref="/dashboard/buyer/profile"
-                      ctaText="Edit preferences"
-                    />
-                  ) : (
-                    <div className="space-y-3">
-                      {recommendations.map((listing) => (
-                        <RecommendationCard
-                          key={listing.id}
-                          listing={listing}
-                          onSaved={refreshAll}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </SectionCard>
               </div>
             </div>

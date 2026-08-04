@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type LoginRole = "agent" | "seller" | "buyer";
+type UserRole = LoginRole | "admin";
 
 const NAV_LINKS = [
   { href: "/about", label: "About" },
@@ -25,6 +26,7 @@ export default function Header() {
 
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [role, setRole] = useState<UserRole | null>(null);
 
   // Login dropdown
   const [open, setOpen] = useState(false);
@@ -43,20 +45,44 @@ export default function Header() {
     }`;
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadUserRole(userId: string | undefined) {
+      if (!userId) {
+        setRole(null);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!cancelled) {
+        setRole((data?.role as UserRole | undefined) ?? null);
+      }
+    }
+
     (async () => {
       const { data } = await supabase.auth.getUser();
       setLoggedIn(!!data.user);
+      await loadUserRole(data.user?.id);
       setLoading(false);
     })();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setLoggedIn(!!session?.user);
+        await loadUserRole(session?.user?.id);
         setLoading(false);
       }
     );
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      listener.subscription.unsubscribe();
+    };
   }, [supabase]);
 
   // Close dropdowns on outside click
@@ -79,12 +105,16 @@ export default function Header() {
   async function logout() {
     await fetch("/api/auth/admin-session", { method: "DELETE" }).catch(() => null);
     await supabase.auth.signOut();
+    setRole(null);
     router.push("/");
   }
 
   function loginHref(role: LoginRole) {
     return `/login?role=${role}`;
   }
+
+  const dashboardHref =
+    role === "buyer" ? "/dashboard/buyer" : role === "admin" ? "/admin" : "/dashboard";
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#06111f]/94 text-white shadow-[0_16px_45px_rgba(2,6,23,0.22)] backdrop-blur-xl">
@@ -162,7 +192,7 @@ export default function Header() {
           {!loading && loggedIn ? (
             <>
               <Link
-                href="/dashboard"
+                href={dashboardHref}
                 className="rounded-xl border border-white/12 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/16"
               >
                 Dashboard

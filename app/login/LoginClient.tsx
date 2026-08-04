@@ -37,7 +37,7 @@ export default function LoginClient() {
       }
 
       if (!cancelled) {
-        redirectAfterLogin();
+        await redirectAfterLogin();
       }
     })();
 
@@ -68,10 +68,10 @@ export default function LoginClient() {
     }
 
     setLoading(false);
-    redirectAfterLogin();
+    await redirectAfterLogin();
   }
 
-  function redirectAfterLogin() {
+  async function redirectAfterLogin() {
     const fallbackNext =
       typeof window !== "undefined"
         ? localStorage.getItem("auth_redirect_after_verify")
@@ -82,7 +82,7 @@ export default function LoginClient() {
       localStorage.removeItem("auth_redirect_after_verify");
     }
 
-    router.replace(safeNext || safeFallbackNext || "/dashboard");
+    router.replace(safeNext || safeFallbackNext || (await dashboardPathForCurrentUser(supabase)));
   }
 
   return (
@@ -151,6 +151,24 @@ async function createAdminSession(accessToken: string) {
       Authorization: `Bearer ${accessToken}`,
     },
   }).catch(() => null);
+}
+
+async function dashboardPathForCurrentUser(supabase: ReturnType<typeof supabaseBrowser>) {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+
+  if (!userId) return "/dashboard";
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (data?.role === "buyer") return "/dashboard/buyer";
+  if (data?.role === "admin") return "/admin";
+
+  return "/dashboard";
 }
 
 function safeRedirectPath(value: string | null) {
