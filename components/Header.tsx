@@ -65,17 +65,32 @@ export default function Header() {
     }
 
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      setLoggedIn(!!data.user);
-      await loadUserRole(data.user?.id);
-      setLoading(false);
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (cancelled) return;
+
+        setLoggedIn(!!data.user);
+        await loadUserRole(data.user?.id);
+      } catch {
+        if (!cancelled) {
+          setLoggedIn(false);
+          setRole(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        setLoggedIn(!!session?.user);
-        await loadUserRole(session?.user?.id);
-        setLoading(false);
+        try {
+          setLoggedIn(!!session?.user);
+          await loadUserRole(session?.user?.id);
+        } catch {
+          setRole(null);
+        } finally {
+          setLoading(false);
+        }
       }
     );
 
@@ -148,11 +163,11 @@ export default function Header() {
             Menu
           </button>
 
-          {!loading && !loggedIn && (
+          {!loggedIn && (
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
-                className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-emerald-200 hover:bg-white/8 sm:block"
+                className="rounded-xl px-3 py-2 text-sm font-semibold text-emerald-200 hover:bg-white/8 sm:px-4"
                 onClick={() => {
                   setJoinOpen(false);
                   setOpen((v) => !v);
@@ -189,7 +204,7 @@ export default function Header() {
             </div>
           )}
 
-          {!loading && loggedIn ? (
+          {loggedIn ? (
             <>
               <Link
                 href={dashboardHref}
@@ -205,46 +220,44 @@ export default function Header() {
               </button>
             </>
           ) : (
-            !loading && (
-              <div className="relative hidden sm:block" ref={joinMenuRef}>
-                <button
-                  type="button"
-                  className="tech-button-primary rounded-xl px-4 py-2 text-sm font-semibold"
-                  onClick={() => {
-                    setOpen(false);
-                    setJoinOpen((v) => !v);
-                  }}
-                >
-                  Join HeyMies
-                </button>
+            <div className="relative hidden sm:block" ref={joinMenuRef}>
+              <button
+                type="button"
+                className="tech-button-primary rounded-xl px-4 py-2 text-sm font-semibold"
+                onClick={() => {
+                  setOpen(false);
+                  setJoinOpen((v) => !v);
+                }}
+              >
+                Join HeyMies
+              </button>
 
-                {joinOpen && (
-                  <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl">
-                    <Link
-                      href="/signup/agent"
-                      className="block px-4 py-3 text-sm font-medium hover:bg-slate-50"
-                      onClick={() => setJoinOpen(false)}
-                    >
-                      Agent
-                    </Link>
-                    <Link
-                      href="/signup/private-seller"
-                      className="block px-4 py-3 text-sm font-medium hover:bg-slate-50"
-                      onClick={() => setJoinOpen(false)}
-                    >
-                      Private Seller
-                    </Link>
-                    <Link
-                      href="/signup/buyer"
-                      className="block px-4 py-3 text-sm font-medium hover:bg-slate-50"
-                      onClick={() => setJoinOpen(false)}
-                    >
-                      Buyer
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )
+              {joinOpen && (
+                <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl">
+                  <Link
+                    href="/signup/agent"
+                    className="block px-4 py-3 text-sm font-medium hover:bg-slate-50"
+                    onClick={() => setJoinOpen(false)}
+                  >
+                    Agent
+                  </Link>
+                  <Link
+                    href="/signup/private-seller"
+                    className="block px-4 py-3 text-sm font-medium hover:bg-slate-50"
+                    onClick={() => setJoinOpen(false)}
+                  >
+                    Private Seller
+                  </Link>
+                  <Link
+                    href="/signup/buyer"
+                    className="block px-4 py-3 text-sm font-medium hover:bg-slate-50"
+                    onClick={() => setJoinOpen(false)}
+                  >
+                    Buyer
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
