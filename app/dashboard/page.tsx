@@ -49,7 +49,19 @@ export default function DashboardPage() {
         return;
       }
 
-      setProfile(data as Profile);
+      const nextProfile = data as Profile;
+
+      if (nextProfile.role === "buyer") {
+        router.replace("/dashboard/buyer");
+        return;
+      }
+
+      if (nextProfile.role === "admin") {
+        router.replace("/admin");
+        return;
+      }
+
+      setProfile(nextProfile);
 
       setLoading(false);
     })();
