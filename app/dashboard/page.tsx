@@ -26,45 +26,60 @@ export default function DashboardPage() {
   const [weekViewingsCount, setWeekViewingsCount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
-      setError(null);
+      try {
+        setError(null);
 
-      const { data: sessionRes } = await supabase.auth.getSession();
-      const user = sessionRes.session?.user;
+        const authRes = await withTimeout(supabase.auth.getUser(), 2500);
+        if (cancelled) return;
 
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+        const user = authRes?.data.user;
 
-      const { data, error: profErr } = await supabase
-        .from("profiles")
-        .select("id, role, full_name, phone")
-        .eq("id", user.id)
-        .single();
+        if (!user) {
+          router.replace("/login");
+          return;
+        }
 
-      if (profErr || !data) {
-        setError(profErr?.message ?? "Profile not found.");
+        const { data, error: profErr } = await supabase
+          .from("profiles")
+          .select("id, role, full_name, phone")
+          .eq("id", user.id)
+          .single();
+
+        if (cancelled) return;
+
+        if (profErr || !data) {
+          setError(profErr?.message ?? "Profile not found.");
+          setLoading(false);
+          return;
+        }
+
+        const nextProfile = data as Profile;
+
+        if (nextProfile.role === "buyer") {
+          router.replace("/dashboard/buyer");
+          return;
+        }
+
+        if (nextProfile.role === "admin") {
+          router.replace("/admin");
+          return;
+        }
+
+        setProfile(nextProfile);
         setLoading(false);
-        return;
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Unable to load dashboard.");
+        setLoading(false);
       }
-
-      const nextProfile = data as Profile;
-
-      if (nextProfile.role === "buyer") {
-        router.replace("/dashboard/buyer");
-        return;
-      }
-
-      if (nextProfile.role === "admin") {
-        router.replace("/admin");
-        return;
-      }
-
-      setProfile(nextProfile);
-
-      setLoading(false);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router, supabase]);
 
   useEffect(() => {
@@ -110,8 +125,8 @@ export default function DashboardPage() {
   }, [profile, supabase]);
 
   async function logout() {
-    await supabase.auth.signOut();
-    router.push("/login");
+    router.replace("/");
+    void withTimeout(supabase.auth.signOut({ scope: "local" }), 1500);
   }
 
   if (loading) {
@@ -286,4 +301,13 @@ function Panel({
       <div className="mt-2 text-sm text-slate-600">{children}</div>
     </div>
   );
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => {
+      window.setTimeout(() => resolve(null), timeoutMs);
+    }),
+  ]);
 }

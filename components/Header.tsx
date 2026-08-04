@@ -27,6 +27,7 @@ export default function Header() {
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
   const [role, setRole] = useState<UserRole | null>(null);
+  const [navigatingDashboard, setNavigatingDashboard] = useState(false);
 
   // Login dropdown
   const [open, setOpen] = useState(false);
@@ -118,18 +119,62 @@ export default function Header() {
   }, []);
 
   async function logout() {
-    await fetch("/api/auth/admin-session", { method: "DELETE" }).catch(() => null);
-    await supabase.auth.signOut();
+    setLoggedIn(false);
+    setLoading(false);
     setRole(null);
-    router.push("/");
+    setOpen(false);
+    setJoinOpen(false);
+    setMobileOpen(false);
+    router.replace("/");
+    router.refresh();
+
+    void Promise.allSettled([
+      fetch("/api/auth/admin-session", { method: "DELETE" }),
+      withTimeout(supabase.auth.signOut({ scope: "local" }), 1500),
+    ]);
+  }
+
+  async function goToDashboard() {
+    if (navigatingDashboard) return;
+
+    const knownPath = dashboardPathForRole(role);
+    if (knownPath) {
+      router.push(knownPath);
+      return;
+    }
+
+    setNavigatingDashboard(true);
+
+    try {
+      const auth = await withTimeout(supabase.auth.getUser(), 2500);
+      const userId = auth?.data.user?.id;
+
+      if (!userId) {
+        setLoggedIn(false);
+        setRole(null);
+        router.push("/login");
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const nextRole = (data?.role as UserRole | undefined) ?? null;
+      setRole(nextRole);
+      router.push(dashboardPathForRole(nextRole) ?? "/dashboard");
+    } catch {
+      router.push("/dashboard");
+    } finally {
+      setNavigatingDashboard(false);
+    }
   }
 
   function loginHref(role: LoginRole) {
     return `/login?role=${role}`;
   }
-
-  const dashboardHref =
-    role === "buyer" ? "/dashboard/buyer" : role === "admin" ? "/admin" : "/dashboard";
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#06111f]/94 text-white shadow-[0_16px_45px_rgba(2,6,23,0.22)] backdrop-blur-xl">
@@ -206,12 +251,14 @@ export default function Header() {
 
           {loggedIn ? (
             <>
-              <Link
-                href={dashboardHref}
+              <button
+                type="button"
+                onClick={goToDashboard}
+                disabled={navigatingDashboard}
                 className="rounded-xl border border-white/12 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/16"
               >
-                Dashboard
-              </Link>
+                {navigatingDashboard ? "Opening..." : "Dashboard"}
+              </button>
               <button
                 onClick={logout}
                 className="rounded-xl px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/12"
@@ -275,7 +322,7 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
-            {!loading && !loggedIn ? (
+            {!loggedIn ? (
               <>
                 <Link
                   href="/login"
@@ -298,4 +345,20 @@ export default function Header() {
       )}
     </header>
   );
+}
+
+function dashboardPathForRole(role: UserRole | null) {
+  if (role === "buyer") return "/dashboard/buyer";
+  if (role === "admin") return "/admin";
+  if (role === "agent" || role === "seller") return "/dashboard";
+  return null;
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  return Promise.race([
+    promise,
+    new Promise<null>((resolve) => {
+      window.setTimeout(() => resolve(null), timeoutMs);
+    }),
+  ]);
 }
