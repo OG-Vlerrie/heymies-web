@@ -33,6 +33,21 @@ function formatZAR(n: number) {
   }).format(n);
 }
 
+const priceOptions = [
+  5000, 10000, 15000, 20000, 30000, 50000, 750000, 1000000, 1500000, 2500000,
+  3500000, 5000000, 7500000, 10000000,
+];
+
+const propertyTypeOptions = [
+  { value: "house", label: "House" },
+  { value: "apartment", label: "Apartment" },
+  { value: "townhouse", label: "Townhouse" },
+  { value: "duplex", label: "Duplex" },
+  { value: "cluster", label: "Cluster" },
+  { value: "land", label: "Land" },
+  { value: "commercial", label: "Commercial" },
+];
+
 export default function ListingsClient({
   initialListings,
   initialError,
@@ -45,8 +60,13 @@ export default function ListingsClient({
   const [error, setError] = useState(initialError);
   const [loading, setLoading] = useState(initialListings.length === 0);
   const [query, setQuery] = useState("");
+  const [saleType, setSaleType] = useState("");
+  const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [minBeds, setMinBeds] = useState("");
+  const [minBaths, setMinBaths] = useState("");
+  const [propertyType, setPropertyType] = useState("");
+  const [sort, setSort] = useState("newest");
 
   useEffect(() => {
     let cancelled = false;
@@ -82,34 +102,73 @@ export default function ListingsClient({
     };
   }, [supabase]);
 
-  const filteredListings = listings.filter((listing) => {
-    const q = query.trim().toLowerCase();
-    const searchable = [
-      listing.title,
-      listing.suburb,
-      listing.city,
-      listing.listing_type,
-      listing.sale_type,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    const listingPrice =
-      listing.sale_type === "rent" ? listing.price_per_month : listing.price;
+  const activeFilters = Boolean(
+    query ||
+      saleType ||
+      minPrice ||
+      maxPrice ||
+      minBeds ||
+      minBaths ||
+      propertyType ||
+      sort !== "newest"
+  );
 
-    if (q && !searchable.includes(q)) return false;
-    if (maxPrice && listingPrice !== null && listingPrice !== undefined) {
-      if (listingPrice > Number(maxPrice)) return false;
-    }
-    if (minBeds && (listing.bedrooms ?? 0) < Number(minBeds)) return false;
+  function resetFilters() {
+    setQuery("");
+    setSaleType("");
+    setMinPrice("");
+    setMaxPrice("");
+    setMinBeds("");
+    setMinBaths("");
+    setPropertyType("");
+    setSort("newest");
+  }
 
-    return true;
-  });
+  const filteredListings = listings
+    .filter((listing) => {
+      const q = query.trim().toLowerCase();
+      const searchable = [
+        listing.title,
+        listing.suburb,
+        listing.city,
+        listing.listing_type,
+        listing.sale_type,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const listingPrice =
+        listing.sale_type === "rent" ? listing.price_per_month : listing.price;
+
+      if (q && !searchable.includes(q)) return false;
+      if (saleType && listing.sale_type !== saleType) return false;
+      if (propertyType && listing.listing_type !== propertyType) return false;
+      if (minPrice) {
+        if (listingPrice === null || listingPrice === undefined) return false;
+        if (listingPrice < Number(minPrice)) return false;
+      }
+      if (maxPrice) {
+        if (listingPrice === null || listingPrice === undefined) return false;
+        if (listingPrice > Number(maxPrice)) return false;
+      }
+      if (minBeds && (listing.bedrooms ?? 0) < Number(minBeds)) return false;
+      if (minBaths && (listing.bathrooms ?? 0) < Number(minBaths)) return false;
+
+      return true;
+    })
+    .sort((a, b) => {
+      const aPrice = a.sale_type === "rent" ? a.price_per_month : a.price;
+      const bPrice = b.sale_type === "rent" ? b.price_per_month : b.price;
+
+      if (sort === "price_asc") return (aPrice ?? Number.MAX_SAFE_INTEGER) - (bPrice ?? Number.MAX_SAFE_INTEGER);
+      if (sort === "price_desc") return (bPrice ?? 0) - (aPrice ?? 0);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   return (
     <div className="grid gap-4">
       <div className="tech-panel rounded-2xl p-4">
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-6">
           <div className="md:col-span-2">
             <label className="mb-1 block text-xs font-semibold text-slate-600">
               Search
@@ -122,40 +181,79 @@ export default function ListingsClient({
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-600">
-              Max price
-            </label>
-            <select
-              value={maxPrice}
-              onChange={(event) => setMaxPrice(event.target.value)}
-              className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none"
-            >
-              <option value="">Any</option>
-              <option value="1500000">R1 500 000</option>
-              <option value="2500000">R2 500 000</option>
-              <option value="3500000">R3 500 000</option>
-              <option value="500000000">R500 000 000</option>
-            </select>
-          </div>
+          <FilterSelect label="Listing type" value={saleType} onChange={setSaleType}>
+            <option value="">Any</option>
+            <option value="sale">For sale</option>
+            <option value="rent">To rent</option>
+          </FilterSelect>
+
+          <FilterSelect label="Property type" value={propertyType} onChange={setPropertyType}>
+            <option value="">Any</option>
+            {propertyTypeOptions.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </FilterSelect>
+
+          <FilterSelect label="Min price" value={minPrice} onChange={setMinPrice}>
+            <option value="">Any</option>
+            {priceOptions.map((price) => (
+              <option key={price} value={price}>
+                {formatZAR(price)}
+              </option>
+            ))}
+          </FilterSelect>
+
+          <FilterSelect label="Max price" value={maxPrice} onChange={setMaxPrice}>
+            <option value="">Any</option>
+            {priceOptions.map((price) => (
+              <option key={price} value={price}>
+                {formatZAR(price)}
+              </option>
+            ))}
+          </FilterSelect>
+
+          <FilterSelect label="Beds" value={minBeds} onChange={setMinBeds}>
+            <option value="">Any</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+            <option value="4">4+</option>
+            <option value="5">5+</option>
+          </FilterSelect>
+
+          <FilterSelect label="Baths" value={minBaths} onChange={setMinBaths}>
+            <option value="">Any</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </FilterSelect>
+
+          <FilterSelect label="Sort" value={sort} onChange={setSort}>
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price low to high</option>
+            <option value="price_desc">Price high to low</option>
+          </FilterSelect>
 
           <div>
             <label className="mb-1 block text-xs font-semibold text-slate-600">
-              Beds
+              Reset
             </label>
-            <select
-              value={minBeds}
-              onChange={(event) => setMinBeds(event.target.value)}
-              className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+            <button
+              type="button"
+              onClick={resetFilters}
+              disabled={!activeFilters}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">Any</option>
-              <option value="1">1+</option>
-              <option value="2">2+</option>
-              <option value="3">3+</option>
-              <option value="4">4+</option>
-            </select>
+              Reset filters
+            </button>
           </div>
         </div>
+
+        <p className="mt-4 text-sm font-semibold text-slate-700">
+          {filteredListings.length} of {listings.length} listings
+        </p>
       </div>
 
       {error ? (
@@ -196,6 +294,33 @@ export default function ListingsClient({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-semibold text-slate-600">
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none"
+      >
+        {children}
+      </select>
     </div>
   );
 }
