@@ -54,24 +54,30 @@ export default function Header() {
         return;
       }
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .maybeSingle();
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", userId)
+          .maybeSingle();
 
-      if (!cancelled) {
-        setRole((data?.role as UserRole | undefined) ?? null);
+        if (!cancelled) {
+          setRole((data?.role as UserRole | undefined) ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setRole(null);
+        }
       }
     }
 
     (async () => {
       try {
-        const { data } = await supabase.auth.getUser();
+        const auth = await withTimeout(supabase.auth.getUser(), 2500);
         if (cancelled) return;
 
-        setLoggedIn(!!data.user);
-        await loadUserRole(data.user?.id);
+        setLoggedIn(!!auth?.data.user);
+        await loadUserRole(auth?.data.user?.id);
       } catch {
         if (!cancelled) {
           setLoggedIn(false);
@@ -82,18 +88,16 @@ export default function Header() {
       }
     })();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        try {
-          setLoggedIn(!!session?.user);
-          await loadUserRole(session?.user?.id);
-        } catch {
-          setRole(null);
-        } finally {
-          setLoading(false);
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session?.user);
+      setLoading(false);
+
+      window.setTimeout(() => {
+        if (!cancelled) {
+          void loadUserRole(session?.user?.id);
         }
-      }
-    );
+      }, 0);
+    });
 
     return () => {
       cancelled = true;

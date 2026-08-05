@@ -5,10 +5,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
+type LoginRole = "agent" | "seller" | "buyer";
+type UserRole = LoginRole | "admin";
+
 export default function LoginClient() {
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next");
+  const requestedRole = roleFromQuery(search.get("role"));
   const safeNext = safeRedirectPath(next);
   const registerHref = safeNext ? `/signup?next=${encodeURIComponent(safeNext)}` : "/signup";
   const supabase = useMemo(() => supabaseBrowser(), []);
@@ -23,21 +27,25 @@ export default function LoginClient() {
     let cancelled = false;
 
     (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const sessionRes = await withTimeout(supabase.auth.getSession(), 2500);
+        const session = sessionRes?.data.session;
 
-      if (!session) {
-        if (!cancelled) setCheckingSession(false);
-        return;
-      }
+        if (!session) return;
 
-      if (session.access_token) {
-        await createAdminSession(session.access_token);
-      }
+        if (session.access_token) {
+          void createAdminSession(session.access_token);
+        }
 
-      if (!cancelled) {
-        await redirectAfterLogin();
+        if (!cancelled) {
+          await redirectAfterLogin(session.user.id);
+        }
+      } catch {
+        // Leave the login form available if session recovery fails.
+      } finally {
+        if (!cancelled) {
+          setCheckingSession(false);
+        }
       }
     })();
 
@@ -52,26 +60,30 @@ export default function LoginClient() {
     setError(null);
     setLoading(true);
 
-    const { data: loginData, error: authErr } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    try {
+      const { data: loginData, error: authErr } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-    if (authErr) {
+      if (authErr) {
+        setError(authErr.message);
+        return;
+      }
+
+      if (loginData.session?.access_token) {
+        await withTimeout(createAdminSession(loginData.session.access_token), 1500);
+      }
+
+      await redirectAfterLogin(loginData.user?.id ?? null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to log in. Please try again.");
+    } finally {
       setLoading(false);
-      setError(authErr.message);
-      return;
     }
-
-    if (loginData.session?.access_token) {
-      await createAdminSession(loginData.session.access_token);
-    }
-
-    setLoading(false);
-    await redirectAfterLogin();
   }
 
-  async function redirectAfterLogin() {
+  async function redirectAfterLogin(userId: string | null) {
     const fallbackNext =
       typeof window !== "undefined"
         ? localStorage.getItem("auth_redirect_after_verify")
@@ -82,7 +94,10 @@ export default function LoginClient() {
       localStorage.removeItem("auth_redirect_after_verify");
     }
 
-    router.replace(safeNext || safeFallbackNext || (await dashboardPathForCurrentUser(supabase)));
+    const dashboardPath =
+      userId ? await dashboardPathForUser(supabase, userId, requestedRole) : dashboardPathForRole(requestedRole);
+
+    router.replace(safeNext || safeFallbackNext || dashboardPath);
   }
 
   return (
@@ -119,7 +134,7 @@ export default function LoginClient() {
             <button
               className="tech-button-primary w-full rounded-xl p-3 text-sm font-semibold disabled:opacity-60"
               onClick={onLogin}
-              disabled={loading || checkingSession}
+              disabled={loading}
             >
               {loading ? "Signing in..." : "Log in"}
             </button>
@@ -153,22 +168,21 @@ async function createAdminSession(accessToken: string) {
   }).catch(() => null);
 }
 
-async function dashboardPathForCurrentUser(supabase: ReturnType<typeof supabaseBrowser>) {
-  const { data: auth } = await supabase.auth.getUser();
-  const userId = auth.user?.id;
-
-  if (!userId) return "/dashboard";
-
-  const { data } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .maybeSingle();
+async function dashboardPathForUser(
+  supabase: ReturnType<typeof supabaseBrowser>,
+  userId: string,
+  fallbackRole: UserRole | null
+) {
+  const profileRes = await withTimeout(
+    supabase.from("profiles").select("role").eq("id", userId).maybeSingle(),
+    2500
+  );
+  const data = profileRes?.data;
 
   if (data?.role === "buyer") return "/dashboard/buyer";
   if (data?.role === "admin") return "/admin";
 
-  return "/dashboard";
+  return dashboardPathForRole(fallbackRole);
 }
 
 function safeRedirectPath(value: string | null) {
@@ -182,4 +196,27 @@ function safeRedirectPath(value: string | null) {
   } catch {
     return null;
   }
+}
+
+function roleFromQuery(value: string | null): UserRole | null {
+  if (value === "agent" || value === "seller" || value === "buyer" || value === "admin") {
+    return value;
+  }
+
+  return null;
+}
+
+function dashboardPathForRole(role: UserRole | null) {
+  if (role === "buyer") return "/dashboard/buyer";
+  if (role === "admin") return "/admin";
+  return "/dashboard";
+}
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number) {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<null>((resolve) => {
+      window.setTimeout(() => resolve(null), timeoutMs);
+    }),
+  ]);
 }

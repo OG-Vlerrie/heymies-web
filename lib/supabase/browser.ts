@@ -17,15 +17,13 @@ export function supabaseBrowser() {
         lock: async (name, _acquireTimeout, fn) => {
           const previous = authLocks.get(name) ?? Promise.resolve();
           const current = previous.catch(() => null).then(fn);
+          const queued = current.finally(() => {
+            if (authLocks.get(name) === queued) {
+              authLocks.delete(name);
+            }
+          });
 
-          authLocks.set(
-            name,
-            current.finally(() => {
-              if (authLocks.get(name) === current) {
-                authLocks.delete(name);
-              }
-            })
-          );
+          authLocks.set(name, queued);
 
           return current;
         },
