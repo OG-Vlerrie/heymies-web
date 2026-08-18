@@ -16,7 +16,8 @@ type BuyerResponseAction =
   | "needs_preapproval"
   | "wants_viewing"
   | "still_comparing"
-  | "better_matches";
+  | "better_matches"
+  | "budget_flexible";
 
 type DueEnquiry = {
   id: string;
@@ -56,6 +57,7 @@ const BUYER_RESPONSE_ACTIONS: Record<BuyerResponseAction, string> = {
   wants_viewing: "I'd like to arrange a viewing",
   still_comparing: "I'm still comparing options",
   better_matches: "Please send me better matches",
+  budget_flexible: "My budget is flexible for this property",
 };
 
 const DUE_STATUSES: QualificationStatus[] = [
@@ -362,7 +364,7 @@ function buildNurtureMessage(enquiry: DueEnquiry, sentCount: number) {
       ? "If now is not the right time, that is completely fine. I will pause after this so your inbox stays quiet."
       : "";
 
-  const base = copyForStatus(enquiry.qualification_status, listingTitle);
+  const base = copyForEnquiry(enquiry, listingTitle);
   const prefix =
     sentCount === 0
       ? "I wanted to quickly follow up while this is still fresh."
@@ -379,6 +381,34 @@ function buildNurtureMessage(enquiry: DueEnquiry, sentCount: number) {
     nextAction: base.nextAction,
     responseActions: base.responseActions,
   };
+}
+
+function copyForEnquiry(enquiry: DueEnquiry, listingTitle: string) {
+  if (isBudgetMismatchEnquiry(enquiry)) {
+    return {
+      subject: `Is your budget flexible for ${listingTitle}?`,
+      heading: "Quick budget check",
+      body: `${listingTitle} looks outside the budget range on your HeyMies profile. If your budget is flexible for this home, I can keep this enquiry moving. Otherwise, I can focus on homes closer to your price range.`,
+      nextAction: "Pick the closest answer and I will update your enquiry.",
+      responseActions: [
+        "budget_flexible",
+        "better_matches",
+        "still_comparing",
+      ] as BuyerResponseAction[],
+    };
+  }
+
+  return copyForStatus(enquiry.qualification_status, listingTitle);
+}
+
+function isBudgetMismatchEnquiry(enquiry: DueEnquiry) {
+  const text = `${enquiry.qualification_summary ?? ""} ${enquiry.next_action ?? ""}`.toLowerCase();
+  return (
+    enquiry.qualification_status === "nurture_for_better_fit" &&
+    (text.includes("budget check: below budget range") ||
+      text.includes("budget check: above budget range") ||
+      text.includes("budget is flexible"))
+  );
 }
 
 function copyForStatus(status: QualificationStatus, listingTitle: string) {

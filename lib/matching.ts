@@ -27,6 +27,14 @@ export type ListingMatch = {
 };
 
 const BUDGET_TOLERANCE = 0.1;
+type BudgetFitStatus =
+  | "open"
+  | "unknown"
+  | "inside"
+  | "slightly_below"
+  | "slightly_above"
+  | "below"
+  | "above";
 
 function normalize(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase().replaceAll("_", " ");
@@ -47,18 +55,73 @@ function listingPrice(listing: MatchListing) {
   return listing.price ?? null;
 }
 
-export function listingFitsBuyerBudget(listing: MatchListing, buyer: BuyerMatchProfile) {
+export function buyerBudgetFit(listing: MatchListing, buyer: BuyerMatchProfile) {
   const price = listingPrice(listing);
   const lowerLimit =
     buyer.budget_min !== null ? buyer.budget_min * (1 - BUDGET_TOLERANCE) : null;
   const upperLimit =
     buyer.budget_max !== null ? buyer.budget_max * (1 + BUDGET_TOLERANCE) : null;
+  let status: BudgetFitStatus = "inside";
+  let reason = "Inside budget";
 
-  if (price === null) return buyer.budget_min === null && buyer.budget_max === null;
-  if (lowerLimit !== null && price < lowerLimit) return false;
-  if (upperLimit !== null && price > upperLimit) return false;
+  if (buyer.budget_min === null && buyer.budget_max === null) {
+    return {
+      price,
+      status: "open" as const,
+      fitsRecommendation: true,
+      isOutsideTolerance: false,
+      reason: "No budget set",
+    };
+  }
 
-  return true;
+  if (price === null) {
+    return {
+      price,
+      status: "unknown" as const,
+      fitsRecommendation: false,
+      isOutsideTolerance: true,
+      reason: "Price not available",
+    };
+  }
+
+  if (lowerLimit !== null && price < lowerLimit) {
+    status = "below";
+    reason = "Below budget range";
+  } else if (buyer.budget_min !== null && price < buyer.budget_min) {
+    status = "slightly_below";
+    reason = "Slightly below budget";
+  } else if (upperLimit !== null && price > upperLimit) {
+    status = "above";
+    reason = "Above budget range";
+  } else if (buyer.budget_max !== null && price > buyer.budget_max) {
+    status = "slightly_above";
+    reason = "Slightly above budget";
+  } else if (buyer.budget_min === null && buyer.budget_max !== null) {
+    reason = "Under max budget";
+  } else if (buyer.budget_min !== null && buyer.budget_max === null) {
+    reason = "Above min budget";
+  }
+
+  return {
+    price,
+    status,
+    fitsRecommendation: status !== "below" && status !== "above",
+    isOutsideTolerance: status === "below" || status === "above",
+    reason,
+  };
+}
+
+export function listingFitsBuyerBudget(listing: MatchListing, buyer: BuyerMatchProfile) {
+  return buyerBudgetFit(listing, buyer).fitsRecommendation;
+}
+
+function budgetScorePoints(status: BudgetFitStatus) {
+  if (status === "inside") return 35;
+  if (status === "slightly_below") return 22;
+  if (status === "slightly_above") return 18;
+  if (status === "open") return 10;
+  if (status === "above") return 4;
+  return 0;
 }
 
 export function scoreListingForBuyer(
@@ -67,38 +130,10 @@ export function scoreListingForBuyer(
 ): ListingMatch {
   let score = 0;
   const reasons: string[] = [];
-  const price = listingPrice(listing);
+  const budgetFit = buyerBudgetFit(listing, buyer);
 
-  if (price !== null && buyer.budget_min !== null && buyer.budget_max !== null) {
-    if (price >= buyer.budget_min && price <= buyer.budget_max) {
-      score += 35;
-      reasons.push("Inside budget");
-    } else if (price >= buyer.budget_min * (1 - BUDGET_TOLERANCE) && price < buyer.budget_min) {
-      score += 22;
-      reasons.push("Slightly below budget");
-    } else if (price > buyer.budget_max && price <= buyer.budget_max * 1.1) {
-      score += 18;
-      reasons.push("Slightly above budget");
-    }
-  } else if (price !== null && buyer.budget_min !== null) {
-    if (price >= buyer.budget_min) {
-      score += 30;
-      reasons.push("Above min budget");
-    } else if (price >= buyer.budget_min * (1 - BUDGET_TOLERANCE)) {
-      score += 18;
-      reasons.push("Slightly below budget");
-    }
-  } else if (price !== null && buyer.budget_max !== null) {
-    if (price <= buyer.budget_max) {
-      score += 30;
-      reasons.push("Under max budget");
-    } else if (price <= buyer.budget_max * (1 + BUDGET_TOLERANCE)) {
-      score += 18;
-      reasons.push("Slightly above budget");
-    }
-  } else {
-    score += 10;
-  }
+  score += budgetScorePoints(budgetFit.status);
+  if (budgetFit.status !== "open") reasons.push(budgetFit.reason);
 
   const areas = preferredAreas(buyer);
   const listingArea = [listing.suburb, listing.city].map(normalize).filter(Boolean);

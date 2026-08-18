@@ -3,7 +3,12 @@ import { createClient } from "@supabase/supabase-js";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { financeReadinessScore, hasFinanceGap } from "@/lib/buyer-finance";
-import { scoreListingForBuyer, type BuyerMatchProfile, type MatchListing } from "@/lib/matching";
+import {
+  buyerBudgetFit,
+  scoreListingForBuyer,
+  type BuyerMatchProfile,
+  type MatchListing,
+} from "@/lib/matching";
 import { ensureEmailPreference } from "@/lib/email-preferences";
 import { apiErrorResponse, logApiError } from "@/lib/api-error-logging";
 
@@ -32,6 +37,7 @@ const BUYER_RESPONSE_ACTIONS = {
   wants_viewing: "I'd like to arrange a viewing",
   still_comparing: "I'm still comparing options",
   better_matches: "Please send me better matches",
+  budget_flexible: "My budget is flexible for this property",
 } as const;
 
 type BuyerResponseAction = keyof typeof BUYER_RESPONSE_ACTIONS;
@@ -486,7 +492,7 @@ export async function POST(req: NextRequest) {
           body: qualification.buyerEmailBody,
           nextAction: qualification.nextAction,
           responseToken,
-          responseActions: responseActionsForStatus(qualification.status),
+          responseActions: qualification.responseActions,
         });
       }
 
@@ -578,7 +584,7 @@ export async function POST(req: NextRequest) {
         body: updatedQualification.buyerEmailBody,
         nextAction: updatedQualification.nextAction,
         responseToken: existingResponseToken,
-        responseActions: responseActionsForStatus(updatedQualification.status),
+        responseActions: updatedQualification.responseActions,
       });
     }
 
@@ -722,6 +728,7 @@ function qualifyEnquiry({
   enquiryCount?: number;
 }) {
   const match = buyer ? scoreListingForBuyer(listing, buyer) : null;
+  const budgetFit = buyer ? buyerBudgetFit(listing, buyer) : null;
   const propertyFitScore = match?.score ?? null;
   const preapproved = (buyer?.preapproved ?? "").trim().toLowerCase();
   const timeline = (buyer?.timeline ?? "").trim().toLowerCase();
@@ -752,7 +759,9 @@ function qualifyEnquiry({
 
   let status: QualificationStatus = "needs_confirmation";
 
-  if (propertyFitScore !== null && propertyFitScore < 35) {
+  if (budgetFit?.isOutsideTolerance) {
+    status = "nurture_for_better_fit";
+  } else if (propertyFitScore !== null && propertyFitScore < 35) {
     status = "nurture_for_better_fit";
   } else if (readinessScore >= 70 && (propertyFitScore ?? 0) >= 70) {
     status = "agent_ready";
@@ -767,11 +776,15 @@ function qualifyEnquiry({
       ? null
       : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-  const statusCopy = qualificationCopy(status, listing.title);
+  const statusCopy =
+    status === "nurture_for_better_fit" && budgetFit?.isOutsideTolerance
+      ? budgetMismatchCopy(listing.title, budgetFit.reason)
+      : qualificationCopy(status, listing.title);
   const summaryParts = [
     propertyFitScore === null
       ? "No buyer profile was found for automated matching."
       : `Property fit ${propertyFitScore}% (${match?.reasons.join(", ") || "review manually"}).`,
+    budgetFit ? `Budget check: ${budgetFit.reason}.` : "Budget check not available.",
     `Readiness ${readinessScore}/100.`,
     buyer?.preapproved ? `Finance: ${buyer.preapproved}.` : "Finance status not confirmed.",
     buyer?.timeline ? `Timeline: ${buyer.timeline}.` : "Timeline not confirmed.",
@@ -792,6 +805,10 @@ function qualifyEnquiry({
     nextNurtureAt,
     buyerEmailHeading: statusCopy.buyerHeading,
     buyerEmailBody: statusCopy.buyerBody,
+    responseActions:
+      status === "nurture_for_better_fit" && budgetFit?.isOutsideTolerance
+        ? (["budget_flexible", "better_matches", "still_comparing"] as BuyerResponseAction[])
+        : responseActionsForStatus(status),
     eventMetadata: {
       property_fit_score: propertyFitScore,
       readiness_score: readinessScore,
@@ -799,6 +816,15 @@ function qualifyEnquiry({
       match_reasons: match?.reasons ?? [],
       next_action: statusCopy.nextAction,
     },
+  };
+}
+
+function budgetMismatchCopy(listingTitle: string, budgetReason: string) {
+  return {
+    nextAction:
+      "Would you like me to keep watching for homes closer to your budget, or is your budget flexible for this property?",
+    buyerHeading: "This property may be outside your budget",
+    buyerBody: `Thanks for enquiring about ${listingTitle}. I checked it against your buyer profile and the main issue is budget: ${budgetReason.toLowerCase()}.\n\nBefore I send this as a serious lead, should I keep watching for better-priced matches, or is your budget flexible for this property?`,
   };
 }
 
@@ -883,7 +909,9 @@ function responseUpdateForAction(
     request_viewing: boolean;
     readiness_score: number | null;
     property_fit_score: number | null;
+    qualification_status?: QualificationStatus | null;
     qualification_summary: string | null;
+    next_action?: string | null;
     listing?: { title: string };
   }
 ) {
@@ -927,6 +955,13 @@ function responseUpdateForAction(
     readinessScore += 2;
     qualificationStatus = "nurture_for_better_fit";
     nextAction = "Recommend better-fit listings before agent handover.";
+  }
+
+  if (action === "budget_flexible") {
+    readinessScore += 12;
+    qualificationStatus = "needs_finance_nurture";
+    nextAction =
+      "Check finance next. The buyer says their budget is flexible for this property, but Mia should confirm pre-approval, deposit readiness, or cash position before agent handover.";
   }
 
   readinessScore = Math.max(0, Math.min(100, readinessScore));
@@ -977,7 +1012,9 @@ function buildBuyerResponseSummary({
           ? "Buyer needs help with pre-approval before agent handover."
           : action === "better_matches"
             ? "Buyer wants Mia to look for better-fit properties before agent handover."
-            : "Buyer is still comparing options and should stay in nurture.";
+            : action === "budget_flexible"
+              ? "Buyer says their budget is flexible for this property."
+              : "Buyer is still comparing options and should stay in nurture.";
 
   const fitLine =
     propertyFitScore > 0
