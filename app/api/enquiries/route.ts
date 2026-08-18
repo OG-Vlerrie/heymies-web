@@ -900,7 +900,8 @@ function responseUpdateForAction(
   if (action === "finance_ready") {
     readinessScore += 25;
     qualificationStatus = propertyFitScore >= 45 ? "agent_ready" : "needs_confirmation";
-    nextAction = "Call the buyer today and confirm finance details before arranging the next step.";
+    nextAction =
+      "Call the buyer today. Confirm whether they are pre-approved, deposit-ready, or cash, then arrange the next step.";
   }
 
   if (action === "wants_viewing") {
@@ -930,13 +931,15 @@ function responseUpdateForAction(
 
   readinessScore = Math.max(0, Math.min(100, readinessScore));
 
-  const qualificationSummary = [
-    enquiry.qualification_summary,
-    `Buyer clicked: ${responseText}.`,
-    `Mia response context: ${listingTitle}.`,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const qualificationSummary = buildBuyerResponseSummary({
+    action,
+    responseText,
+    listingTitle,
+    readinessScore,
+    propertyFitScore,
+    requestViewing,
+    latestMessage: enquiry.latest_message,
+  });
 
   return {
     requestViewing,
@@ -946,6 +949,54 @@ function responseUpdateForAction(
     nextAction,
     nurtureStatus: qualificationStatus === "agent_ready" ? "handover_ready" : "nurturing",
   };
+}
+
+function buildBuyerResponseSummary({
+  action,
+  responseText,
+  listingTitle,
+  readinessScore,
+  propertyFitScore,
+  requestViewing,
+  latestMessage,
+}: {
+  action: BuyerResponseAction;
+  responseText: string;
+  listingTitle: string;
+  readinessScore: number;
+  propertyFitScore: number;
+  requestViewing: boolean;
+  latestMessage: string | null;
+}) {
+  const intent =
+    action === "finance_ready"
+      ? "Buyer confirmed finance readiness after Mia's follow-up."
+      : action === "wants_viewing"
+        ? "Buyer asked to arrange a viewing after Mia's follow-up."
+        : action === "needs_preapproval"
+          ? "Buyer needs help with pre-approval before agent handover."
+          : action === "better_matches"
+            ? "Buyer wants Mia to look for better-fit properties before agent handover."
+            : "Buyer is still comparing options and should stay in nurture.";
+
+  const fitLine =
+    propertyFitScore > 0
+      ? `Property fit is ${propertyFitScore}% for ${listingTitle}.`
+      : `Property fit for ${listingTitle} still needs a manual check.`;
+
+  const enquiryLine = latestMessage
+    ? `Original enquiry: "${latestMessage}"`
+    : requestViewing
+      ? "Original enquiry included a viewing request."
+      : "Original enquiry asked for more information.";
+
+  return [
+    intent,
+    `Buyer clicked: ${responseText}.`,
+    fitLine,
+    `Updated readiness is ${readinessScore}/100.`,
+    enquiryLine,
+  ].join("\n");
 }
 
 async function sendAgentReadyResponseEmail({
@@ -995,6 +1046,11 @@ async function sendAgentReadyResponseEmail({
   }
 
   const listingTitle = enquiry.listing?.title ?? "a listing";
+  const safeQualificationSummary = escapeHtmlTextBlock(qualificationSummary);
+  const safeNextAction = escapeHtml(nextAction);
+  const safeLatestMessage = enquiry.latest_message
+    ? escapeHtmlTextBlock(enquiry.latest_message)
+    : null;
 
   try {
     await resend.emails.send({
@@ -1004,7 +1060,7 @@ async function sendAgentReadyResponseEmail({
       html: `
         <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
           <h2 style="margin-bottom: 8px;">Buyer response received</h2>
-          <p>Mia from HeyMies asked one follow-up question and the buyer clicked: <strong>${escapeHtml(
+          <p style="margin-top: 0;">Mia asked one follow-up question. The buyer replied: <strong>${escapeHtml(
             BUYER_RESPONSE_ACTIONS[action]
           )}</strong>.</p>
           <div style="margin: 20px 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px;">
@@ -1016,8 +1072,19 @@ async function sendAgentReadyResponseEmail({
             <p><strong>Property fit:</strong> ${
               propertyFitScore === null ? "Pending" : `${propertyFitScore}%`
             }</p>
-            <p><strong>Mia's read:</strong> ${escapeHtml(qualificationSummary)}</p>
-            <p><strong>Suggested next step:</strong> ${escapeHtml(nextAction)}</p>
+            <div style="margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 10px;">
+              <p style="margin: 0 0 8px;"><strong>Mia's read</strong></p>
+              <p style="margin: 0;">${safeQualificationSummary}</p>
+            </div>
+            <div style="margin-top: 12px; padding: 12px; background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 10px;">
+              <p style="margin: 0 0 8px;"><strong>Suggested next step</strong></p>
+              <p style="margin: 0;">${safeNextAction}</p>
+            </div>
+            ${
+              safeLatestMessage
+                ? `<div style="margin-top: 12px;"><p style="margin-bottom: 6px;"><strong>Original buyer message:</strong></p><p style="margin-top: 0;">${safeLatestMessage}</p></div>`
+                : ""
+            }
           </div>
           <p>Warmly,<br />Mia from HeyMies</p>
         </div>
@@ -1035,4 +1102,8 @@ function escapeHtml(input: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function escapeHtmlTextBlock(input: string) {
+  return escapeHtml(input).replaceAll("\n", "<br />");
 }
