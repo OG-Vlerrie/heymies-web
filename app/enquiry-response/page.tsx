@@ -11,6 +11,8 @@ const ACTION_COPY: Record<string, string> = {
     "Thanks. I have noted that you are still comparing options.",
   better_matches:
     "Thanks. I have noted that you would prefer better-fit matches.",
+  budget_flexible:
+    "Thanks. I have noted that your budget may be flexible for this property.",
 };
 
 export default function EnquiryResponsePage({

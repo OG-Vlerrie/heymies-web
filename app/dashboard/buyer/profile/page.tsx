@@ -45,6 +45,9 @@ function plusToInt(v: string): number | null {
 export default function BuyerProfilePage() {
   const router = useRouter();
   const supabase = useMemo(() => supabaseBrowser(), []);
+  const [miaAction, setMiaAction] = useState<string | null>(null);
+  const [focus, setFocus] = useState<string | null>(null);
+  const miaPrompt = useMemo(() => profilePromptForMiaAction(miaAction), [miaAction]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -111,6 +114,12 @@ export default function BuyerProfilePage() {
     return searchSouthAfricanLocations(areaQuery, 12);
   }, [areaQuery]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setMiaAction(params.get("mia"));
+    setFocus(params.get("focus"));
+  }, []);
+
   function computeLeadScore() {
     let score = 0;
 
@@ -147,7 +156,11 @@ export default function BuyerProfilePage() {
         const user = auth.user;
 
         if (!user) {
-          router.push("/login?next=/dashboard/buyer/profile");
+          const next =
+            typeof window !== "undefined"
+              ? `${window.location.pathname}${window.location.search}`
+              : "/dashboard/buyer/profile";
+          router.push(`/login?next=${encodeURIComponent(next)}`);
           return;
         }
 
@@ -262,6 +275,13 @@ export default function BuyerProfilePage() {
         <h1 className="text-3xl font-semibold">Complete your buyer profile</h1>
         <p className="mt-2 text-slate-600">This helps HeyMies match you faster.</p>
 
+        {miaPrompt && (
+          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+            <p className="font-semibold">{miaPrompt.title}</p>
+            <p className="mt-1">{miaPrompt.body}</p>
+          </div>
+        )}
+
         {error && (
           <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
@@ -307,6 +327,12 @@ export default function BuyerProfilePage() {
                 />
               </Field>
             </div>
+
+            {focus === "budget" && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+                Update your budget range if this property is still realistic, then save your profile so Mia can use the new range in future matching.
+              </div>
+            )}
 
             <div>
               <div className="mb-2 block text-sm font-medium text-slate-700">
@@ -444,6 +470,12 @@ export default function BuyerProfilePage() {
               )}
             </Field>
 
+            {focus === "finance" && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+                Set the finance option that best matches your position now, then save. Mia will use this in future handovers to agents.
+              </div>
+            )}
+
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Buying timeline">
                 <select
@@ -533,4 +565,29 @@ function Chip({ text, onRemove }: { text: string; onRemove: () => void }) {
       </button>
     </span>
   );
+}
+
+function profilePromptForMiaAction(action: string | null) {
+  if (action === "finance_ready") {
+    return {
+      title: "Mia recorded your finance-ready response",
+      body: "Please update your finance or deposit status here so your buyer profile matches what you told Mia.",
+    };
+  }
+
+  if (action === "needs_preapproval") {
+    return {
+      title: "Mia recorded that pre-approval help may be useful",
+      body: "Update your finance status here, or use the pre-approval link below if you want to start that step.",
+    };
+  }
+
+  if (action === "budget_flexible") {
+    return {
+      title: "Mia recorded that your budget may be flexible",
+      body: "Adjust your budget range here if this property is realistic, so future recommendations and agent handovers use the right range.",
+    };
+  }
+
+  return null;
 }

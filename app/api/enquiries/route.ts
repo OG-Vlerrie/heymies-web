@@ -695,6 +695,8 @@ export async function GET(req: NextRequest) {
       qualification_status: response.qualificationStatus,
       readiness_score: response.readinessScore,
       next_action: response.nextAction,
+      response_redirect_path: response.redirectPath,
+      response_redirect_label: response.redirectLabel,
     },
   });
 
@@ -709,11 +711,7 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  return NextResponse.redirect(
-    `${origin}/enquiry-response?result=recorded&action=${encodeURIComponent(
-      action
-    )}&status=${encodeURIComponent(response.qualificationStatus)}`
-  );
+  return NextResponse.redirect(`${origin}${response.redirectPath}`);
 }
 
 function qualifyEnquiry({
@@ -906,6 +904,7 @@ function responseUpdateForAction(
   action: BuyerResponseAction,
   enquiry: {
     latest_message: string | null;
+    listing_id: string;
     request_viewing: boolean;
     readiness_score: number | null;
     property_fit_score: number | null;
@@ -965,6 +964,8 @@ function responseUpdateForAction(
   }
 
   readinessScore = Math.max(0, Math.min(100, readinessScore));
+  const redirectPath = responseRedirectPath(action, enquiry.listing_id, qualificationStatus);
+  const redirectLabel = responseDestinationLabel(action);
 
   const qualificationSummary = buildBuyerResponseSummary({
     action,
@@ -974,6 +975,7 @@ function responseUpdateForAction(
     propertyFitScore,
     requestViewing,
     latestMessage: enquiry.latest_message,
+    redirectLabel,
   });
 
   return {
@@ -983,7 +985,56 @@ function responseUpdateForAction(
     qualificationSummary,
     nextAction,
     nurtureStatus: qualificationStatus === "agent_ready" ? "handover_ready" : "nurturing",
+    redirectPath,
+    redirectLabel,
   };
+}
+
+function responseRedirectPath(
+  action: BuyerResponseAction,
+  listingId: string,
+  qualificationStatus: QualificationStatus
+) {
+  const actionParam = encodeURIComponent(action);
+  const statusParam = encodeURIComponent(qualificationStatus);
+
+  if (action === "finance_ready" || action === "needs_preapproval") {
+    return `/dashboard/buyer/profile?mia=${actionParam}&focus=finance&status=${statusParam}`;
+  }
+
+  if (action === "budget_flexible") {
+    return `/dashboard/buyer/profile?mia=${actionParam}&focus=budget&status=${statusParam}`;
+  }
+
+  if (action === "wants_viewing") {
+    return `/listings/${encodeURIComponent(listingId)}?mia=${actionParam}#enquire`;
+  }
+
+  if (action === "better_matches") {
+    return `/listings?mia=${actionParam}`;
+  }
+
+  return `/dashboard/buyer?mia=${actionParam}&status=${statusParam}`;
+}
+
+function responseDestinationLabel(action: BuyerResponseAction) {
+  if (action === "finance_ready" || action === "needs_preapproval") {
+    return "buyer profile finance section";
+  }
+
+  if (action === "budget_flexible") {
+    return "buyer profile budget section";
+  }
+
+  if (action === "wants_viewing") {
+    return "listing enquiry/viewing section";
+  }
+
+  if (action === "better_matches") {
+    return "listings search page";
+  }
+
+  return "buyer dashboard";
 }
 
 function buildBuyerResponseSummary({
@@ -994,6 +1045,7 @@ function buildBuyerResponseSummary({
   propertyFitScore,
   requestViewing,
   latestMessage,
+  redirectLabel,
 }: {
   action: BuyerResponseAction;
   responseText: string;
@@ -1002,6 +1054,7 @@ function buildBuyerResponseSummary({
   propertyFitScore: number;
   requestViewing: boolean;
   latestMessage: string | null;
+  redirectLabel: string;
 }) {
   const intent =
     action === "finance_ready"
@@ -1030,6 +1083,7 @@ function buildBuyerResponseSummary({
   return [
     intent,
     `Buyer clicked: ${responseText}.`,
+    `Buyer was sent to: ${redirectLabel}.`,
     fitLine,
     `Updated readiness is ${readinessScore}/100.`,
     enquiryLine,
