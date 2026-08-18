@@ -9,6 +9,7 @@ import SaveListingButton from "@/components/listings/SaveListingButton";
 import { formatDateTimeZA } from "@/lib/display-format";
 import { isStrongFinanceStatus } from "@/lib/buyer-finance";
 import {
+  listingFitsBuyerBudget,
   scoreListingForBuyer,
   type ListingMatch,
   type MatchListing,
@@ -310,6 +311,7 @@ export default function BuyerDashboardPage() {
 
     const scored = ((data ?? []) as Omit<RecommendedListing, "match">[])
       .filter((listing) => !savedIds.has(listing.id))
+      .filter((listing) => listingFitsBuyerBudget(listing, currentBuyer))
       .map((listing) => ({
         ...listing,
         match: scoreListingForBuyer(listing, currentBuyer),

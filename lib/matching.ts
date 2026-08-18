@@ -26,6 +26,8 @@ export type ListingMatch = {
   reasons: string[];
 };
 
+const BUDGET_TOLERANCE = 0.1;
+
 function normalize(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase().replaceAll("_", " ");
 }
@@ -45,6 +47,20 @@ function listingPrice(listing: MatchListing) {
   return listing.price ?? null;
 }
 
+export function listingFitsBuyerBudget(listing: MatchListing, buyer: BuyerMatchProfile) {
+  const price = listingPrice(listing);
+  const lowerLimit =
+    buyer.budget_min !== null ? buyer.budget_min * (1 - BUDGET_TOLERANCE) : null;
+  const upperLimit =
+    buyer.budget_max !== null ? buyer.budget_max * (1 + BUDGET_TOLERANCE) : null;
+
+  if (price === null) return buyer.budget_min === null && buyer.budget_max === null;
+  if (lowerLimit !== null && price < lowerLimit) return false;
+  if (upperLimit !== null && price > upperLimit) return false;
+
+  return true;
+}
+
 export function scoreListingForBuyer(
   listing: MatchListing,
   buyer: BuyerMatchProfile
@@ -57,17 +73,28 @@ export function scoreListingForBuyer(
     if (price >= buyer.budget_min && price <= buyer.budget_max) {
       score += 35;
       reasons.push("Inside budget");
-    } else if (price <= buyer.budget_max * 1.1) {
+    } else if (price >= buyer.budget_min * (1 - BUDGET_TOLERANCE) && price < buyer.budget_min) {
+      score += 22;
+      reasons.push("Slightly below budget");
+    } else if (price > buyer.budget_max && price <= buyer.budget_max * 1.1) {
       score += 18;
-      reasons.push("Near budget");
+      reasons.push("Slightly above budget");
+    }
+  } else if (price !== null && buyer.budget_min !== null) {
+    if (price >= buyer.budget_min) {
+      score += 30;
+      reasons.push("Above min budget");
+    } else if (price >= buyer.budget_min * (1 - BUDGET_TOLERANCE)) {
+      score += 18;
+      reasons.push("Slightly below budget");
     }
   } else if (price !== null && buyer.budget_max !== null) {
     if (price <= buyer.budget_max) {
       score += 30;
       reasons.push("Under max budget");
-    } else if (price <= buyer.budget_max * 1.1) {
+    } else if (price <= buyer.budget_max * (1 + BUDGET_TOLERANCE)) {
       score += 18;
-      reasons.push("Near budget");
+      reasons.push("Slightly above budget");
     }
   } else {
     score += 10;
