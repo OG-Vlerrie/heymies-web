@@ -1,177 +1,121 @@
 import Link from "next/link";
-import DemoRequestForm from "./DemoRequestForm";
-import {
-  TechCard,
-  TechFooter,
-  TechHero,
-  TechSection,
-} from "@/components/TechPage";
+import { createClient } from "@supabase/supabase-js";
+import ListingsClient, { type PublicListing } from "./listings/ListingsClient";
+import { TechCard, TechFooter } from "@/components/TechPage";
 
-const audiences = [
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const paths = [
   {
-    title: "Buyers",
-    body: "Build a real search profile, compare homes, and enquire without being chased before you are ready.",
+    title: "Buying a home?",
+    body: "Save favourites, compare properties, and get guidance based on your search.",
     href: "/for-buyers",
-    label: "For buyers",
+    label: "How HeyMies helps buyers",
   },
   {
-    title: "Private sellers",
-    body: "Sign up once, get a draft listing from your details, add photos, and publish when it is ready.",
+    title: "Selling privately?",
+    body: "Create your listing and connect with buyers who are ready to take the next step.",
     href: "/for-private-sellers",
-    label: "For sellers",
+    label: "List your property",
   },
   {
-    title: "Agents",
-    body: "Receive fewer, better leads with buyer readiness, property fit, and Mia's suggested next action.",
+    title: "Working in property?",
+    body: "Turn property enquiries into better-qualified, better-timed conversations.",
     href: "/for-agents",
-    label: "For agents",
+    label: "HeyMies for agents",
   },
 ];
 
-const flow = [
-  ["Profile", "HeyMies captures the buyer or seller context upfront."],
-  ["Match", "Listings are checked against buyer preferences and budget."],
-  ["Qualify", "Enquiries are checked for readiness, finance, and fit."],
-  ["Nurture", "Mia follows up with human-style one-click questions."],
-  ["Handover", "Agents receive the buyer when the signal is strong."],
-];
+function supabasePublic() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-export default function HomePage() {
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+export default async function HomePage() {
+  let listings: PublicListing[] = [];
+  let error: string | null = null;
+
+  try {
+    const { data, error: loadError } = await supabasePublic()
+      .from("listings")
+      .select(
+        "id, title, suburb, city, price, price_per_month, sale_type, listing_type, bedrooms, bathrooms, parking, cover_image, images, status, created_at"
+      )
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(60);
+
+    if (loadError) error = loadError.message;
+    else listings = (data ?? []) as PublicListing[];
+  } catch (loadError: unknown) {
+    error = loadError instanceof Error ? loadError.message : "Could not load listings.";
+  }
+
   return (
     <main className="tech-page">
-      <TechHero
-        eyebrow="Lead intelligence for real estate"
-        title="HeyMies turns property enquiries into ready-to-buy conversations."
-        subtitle="Mia qualifies buyers, follows up automatically, sends better matches, and hands over cleaner leads to agents and sellers when the timing is right."
-        primary={{ href: "#agency-demo", label: "Request demo" }}
-        secondary={{ href: "/how-it-works", label: "See the engine" }}
-        graphic="pipeline"
-      />
-
-      <TechSection title="One platform, three smoother journeys" tone="alt">
-        <div className="grid gap-5 md:grid-cols-3">
-          {audiences.map((item) => (
-            <TechCard key={item.title}>
-              <h2 className="text-xl font-semibold">{item.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-700">{item.body}</p>
-              <Link
-                href={item.href}
-                className="mt-5 inline-flex text-sm font-semibold text-emerald-700"
-              >
-                {item.label}
-              </Link>
-            </TechCard>
-          ))}
+      <section className="tech-hero border-b border-white/10">
+        <div className="mx-auto max-w-6xl px-4 py-10 text-center md:py-12">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-200">
+            HeyMies property marketplace
+          </p>
+          <h1 className="mt-3 text-4xl font-semibold leading-tight text-white md:text-5xl">
+            Find a place that fits.
+          </h1>
+          <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
+            Browse homes for sale and to rent, then let HeyMies help you take the next step.
+          </p>
         </div>
-      </TechSection>
+      </section>
 
-      <TechSection title="What makes HeyMies different">
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <TechCard>
-            <p className="tech-kicker">Mia from HeyMies</p>
-            <h2 className="mt-3 text-2xl font-semibold">
-              The follow-up happens before the agent loses momentum.
+      <section className="tech-section-alt">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="tech-kicker">Homes on HeyMies</p>
+              <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                Browse available properties
+              </h2>
+            </div>
+            <Link href="/signup/buyer" className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+              Create a buyer profile
+            </Link>
+          </div>
+
+          <ListingsClient initialListings={listings} initialError={error} />
+        </div>
+      </section>
+
+      <section className="tech-section">
+        <div className="mx-auto max-w-6xl px-4 py-14 md:py-16">
+          <div className="max-w-2xl">
+            <p className="tech-kicker">More than a property search</p>
+            <h2 className="mt-3 text-3xl font-semibold text-slate-950">
+              A smoother way from browsing to moving.
             </h2>
             <p className="mt-4 leading-7 text-slate-700">
-              A buyer enquiry is not automatically treated as a hot lead. Mia checks
-              finance, intent, fit, and timing first. Buyers who need guidance stay in
-              nurture. Buyers who are ready are handed over with context.
-            </p>
-          </TechCard>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Metric label="Property fit" value="Budget, area, type, beds" />
-            <Metric label="Readiness" value="Finance, timeline, viewing intent" />
-            <Metric label="Nurture" value="One-click buyer replies" />
-            <Metric label="Handover" value="Clear summary for the agent" />
-          </div>
-        </div>
-      </TechSection>
-
-      <TechSection title="From interest to handover" tone="alt">
-        <div className="grid gap-4 md:grid-cols-5">
-          {flow.map(([title, body], index) => (
-            <TechCard key={title}>
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-950 text-sm font-semibold text-emerald-200">
-                {index + 1}
-              </span>
-              <h2 className="mt-4 font-semibold">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-700">{body}</p>
-            </TechCard>
-          ))}
-        </div>
-      </TechSection>
-
-      <TechSection title="Book a demo for your agency">
-        <div
-          id="agency-demo"
-          className="grid scroll-mt-24 gap-8 lg:grid-cols-[1fr_0.86fr] lg:items-start"
-        >
-          <div>
-            <p className="tech-kicker">Agency fit check</p>
-            <h2 className="mt-3 max-w-2xl text-3xl font-semibold leading-tight text-slate-950">
-              See how HeyMies can qualify, nurture, and hand over cleaner property
-              leads for your team.
-            </h2>
-            <p className="mt-4 max-w-2xl leading-7 text-slate-700">
-              Tell us a little about your agency and what you want to improve. We will
-              use that context to shape the demo around your lead flow, buyer
-              readiness, and handover process.
-            </p>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <TechCard>
-                <p className="text-sm font-semibold text-slate-600">Demo focus</p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">
-                  Your workflow
-                </p>
-              </TechCard>
-              <TechCard>
-                <p className="text-sm font-semibold text-slate-600">Best for</p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">
-                  Agency teams
-                </p>
-              </TechCard>
-              <TechCard>
-                <p className="text-sm font-semibold text-slate-600">Next step</p>
-                <p className="mt-2 text-lg font-semibold text-slate-950">
-                  Fit call
-                </p>
-              </TechCard>
-            </div>
-          </div>
-
-          <TechCard>
-            <DemoRequestForm />
-          </TechCard>
-        </div>
-      </TechSection>
-
-      <section className="tech-hero px-4 py-16 text-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-3xl font-semibold">Less noise. Better timing.</h2>
-            <p className="mt-3 max-w-2xl text-slate-300">
-              Whether you are buying, selling privately, or working leads as an agent,
-              HeyMies keeps the process moving toward real conversations.
+              HeyMies helps buyers find the right fit, sellers present their homes,
+              and agents focus on the conversations that matter.
             </p>
           </div>
-          <Link href="/signup" className="tech-button-primary rounded-xl px-6 py-3 text-sm font-semibold">
-            Create account
-          </Link>
+
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
+            {paths.map((path) => (
+              <TechCard key={path.title}>
+                <h3 className="text-xl font-semibold text-slate-950">{path.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-700">{path.body}</p>
+                <Link href={path.href} className="mt-5 inline-flex text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+                  {path.label} <span aria-hidden className="ml-1">→</span>
+                </Link>
+              </TechCard>
+            ))}
+          </div>
         </div>
       </section>
 
       <TechFooter />
     </main>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <TechCard>
-      <p className="text-sm font-semibold text-slate-600">{label}</p>
-      <p className="mt-2 text-lg font-semibold text-slate-950">{value}</p>
-    </TechCard>
   );
 }
