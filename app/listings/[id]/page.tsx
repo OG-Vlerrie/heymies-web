@@ -2,6 +2,7 @@ import EnquiryGate from "@/components/listings/EnquiryGate";
 import CompareListingButton from "@/components/listings/CompareListingButton";
 import ListingMatchBadge from "@/components/listings/ListingMatchBadge";
 import SaveListingButton from "@/components/listings/SaveListingButton";
+import ListingPhotoGallery from "@/components/listings/ListingPhotoGallery";
 import { listingTypeLabel, saleTypeLabel } from "@/lib/display-format";
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
@@ -69,8 +70,6 @@ export default async function ListingDetailPage({
     .filter(Boolean)
     .join(", ");
 
-  const heroImage = listing.cover_image || listing.images?.[0] || null;
-
   const displayPrice =
     listing.sale_type === "rent"
       ? listing.price_per_month
@@ -89,17 +88,11 @@ export default async function ListingDetailPage({
           <div className="md:col-span-3">
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
               
-              {heroImage ? (
-                <img
-                  src={heroImage}
-                  alt={listing.title}
-                  className="h-[320px] w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-[320px] items-center justify-center bg-slate-50 text-sm text-slate-500">
-                  No image available
-                </div>
-              )}
+              <ListingPhotoGallery
+                title={listing.title}
+                coverImage={listing.cover_image}
+                images={listing.images}
+              />
 
               <div className="p-6">
                 <h1 className="text-3xl font-semibold">{listing.title}</h1>
@@ -139,23 +132,6 @@ export default async function ListingDetailPage({
                   </div>
                 )}
 
-                {/* GALLERY */}
-                {listing.images?.length ? (
-                  <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {listing.images.slice(0, 9).map((src) => (
-                      <div
-                        key={src}
-                        className="overflow-hidden rounded-2xl border border-slate-200"
-                      >
-                        <img
-                          src={src}
-                          alt=""
-                          className="h-28 w-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>
