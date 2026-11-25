@@ -50,7 +50,13 @@ export default async function ListingDetailPage({
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: { persistSession: false },
+      global: {
+        fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+      },
+    }
   );
 
   const { data: l, error } = await supabase
@@ -127,7 +133,7 @@ export default async function ListingDetailPage({
 
                 {/* DESCRIPTION */}
                 {listing.description && (
-                  <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  <div className="mt-6 whitespace-pre-line rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
                     {listing.description}
                   </div>
                 )}
