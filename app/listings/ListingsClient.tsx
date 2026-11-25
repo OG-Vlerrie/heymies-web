@@ -363,16 +363,16 @@ function ListingCard({ listing }: { listing: PublicListing }) {
       <Link href={`/listings/${listing.id}`} className="block">
         <div className="tech-card rounded-3xl p-5 transition">
           {image ? (
-            <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+            <div className="mb-4 aspect-video overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
               <img
                 src={image}
                 alt={listing.title}
-                className="h-44 w-full object-cover"
+                className="h-full w-full object-contain"
                 loading="lazy"
               />
             </div>
           ) : (
-            <div className="mb-4 flex h-44 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-xs text-slate-500">
+            <div className="mb-4 flex aspect-video items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-xs text-slate-500">
               No photo
             </div>
           )}
