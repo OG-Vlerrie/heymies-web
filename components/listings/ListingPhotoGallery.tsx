@@ -48,7 +48,7 @@ export default function ListingPhotoGallery({
 
   if (photos.length === 0) {
     return (
-      <div className="flex h-[320px] items-center justify-center bg-slate-50 text-sm text-slate-500 sm:h-[440px]">
+      <div className="flex aspect-video w-full items-center justify-center bg-slate-50 text-sm text-slate-500">
         No image available
       </div>
     );
@@ -73,13 +73,13 @@ export default function ListingPhotoGallery({
       <button
         type="button"
         onClick={() => setActiveIndex(0)}
-        className="group relative block h-[320px] w-full cursor-zoom-in overflow-hidden bg-slate-100 text-left sm:h-[440px]"
+        className="relative block aspect-video w-full cursor-zoom-in overflow-hidden bg-slate-100 text-left"
         aria-label={`Open all ${photos.length} photos for ${title}`}
       >
         <img
           src={photos[0]}
           alt={title}
-          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+          className="h-full w-full object-contain"
         />
         <span className="absolute bottom-4 right-4 rounded-full bg-slate-950/80 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur-sm">
           View {photos.length === 1 ? "photo" : `all ${photos.length} photos`}
