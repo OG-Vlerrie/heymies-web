@@ -14,7 +14,6 @@ import {
   loadSignupDraftFromKeys,
   saveSignupDraft,
 } from "@/lib/signup-drafts";
-import { supabaseBrowser } from "@/lib/supabase/browser";
 
 type FormState = {
   // Auth
@@ -85,7 +84,6 @@ const INITIAL_FORM: FormState = {
 
 export default function AgentSignupPage() {
   const router = useRouter();
-  const supabase = useMemo(() => supabaseBrowser(), []);
 
   const [draftSessionId] = useState(() => getSignupDraftSessionId("agent"));
   const [step, setStep] = useState(() => {
@@ -252,16 +250,18 @@ export default function AgentSignupPage() {
         popia_consent: form.popia_consent,
       };
 
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password: form.password,
-        options: {
+      const response = await fetch("/api/agents/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
           emailRedirectTo: confirmationRedirect(),
           data: payload,
-        },
+        }),
       });
-
-      if (signUpError) throw new Error(signUpError.message);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error ?? "Could not create account.");
 
       clearSignupDraft([...draftKeys, `${DRAFT_KEY}:step:${draftSessionId}`]);
 
