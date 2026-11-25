@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import CompareListingButton from "@/components/listings/CompareListingButton";
 import SaveListingButton from "@/components/listings/SaveListingButton";
 import { saleTypeLabel } from "@/lib/display-format";
@@ -51,9 +51,11 @@ const propertyTypeOptions = [
 export default function ListingsClient({
   initialListings,
   initialError,
+  compact = false,
 }: {
   initialListings: PublicListing[];
   initialError: string | null;
+  compact?: boolean;
 }) {
   const supabase = useMemo(() => supabaseBrowser(), []);
   const [listings, setListings] = useState(initialListings);
@@ -67,6 +69,10 @@ export default function ListingsClient({
   const [minBaths, setMinBaths] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [sort, setSort] = useState("newest");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const searchId = useId();
+  const moreFiltersId = useId();
+  const extraFilterCount = Number(Boolean(saleType)) + Number(Boolean(minBaths)) + Number(sort !== "newest");
 
   useEffect(() => {
     let cancelled = false;
@@ -168,24 +174,20 @@ export default function ListingsClient({
   return (
     <div className="grid gap-4">
       <div className="tech-panel rounded-2xl p-4">
-        <div className="grid gap-3 md:grid-cols-6">
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-xs font-semibold text-slate-600">
+        <div className={compact ? "grid grid-cols-2 gap-3 lg:grid-cols-5" : "grid gap-3 md:grid-cols-6"}>
+          <div className={compact ? "col-span-full" : "md:col-span-2"}>
+            <label htmlFor={searchId} className="mb-1 block text-xs font-semibold text-slate-600">
               Search
             </label>
             <input
+              id={searchId}
+              type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="e.g. Sandton, 2-bed, townhouse..."
+              placeholder={compact ? "Search by city or suburb" : "e.g. Sandton, 2-bed, townhouse..."}
               className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none"
             />
           </div>
-
-          <FilterSelect label="Listing type" value={saleType} onChange={setSaleType}>
-            <option value="">Any</option>
-            <option value="sale">For sale</option>
-            <option value="rent">To rent</option>
-          </FilterSelect>
 
           <FilterSelect label="Property type" value={propertyType} onChange={setPropertyType}>
             <option value="">Any</option>
@@ -214,13 +216,36 @@ export default function ListingsClient({
             ))}
           </FilterSelect>
 
-          <FilterSelect label="Beds" value={minBeds} onChange={setMinBeds}>
+          <FilterSelect label="Bedrooms" value={minBeds} onChange={setMinBeds}>
             <option value="">Any</option>
             <option value="1">1+</option>
             <option value="2">2+</option>
             <option value="3">3+</option>
             <option value="4">4+</option>
             <option value="5">5+</option>
+          </FilterSelect>
+
+          {compact && (
+            <button
+              type="button"
+              aria-expanded={showMoreFilters}
+              aria-controls={moreFiltersId}
+              onClick={() => setShowMoreFilters((open) => !open)}
+              className="col-span-full self-end rounded-xl border border-emerald-700 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 lg:col-span-1"
+            >
+              {showMoreFilters ? "Hide filters" : "More filters"}
+              {extraFilterCount > 0 ? ` (${extraFilterCount})` : ""}
+            </button>
+          )}
+
+          <div
+            id={moreFiltersId}
+            className={compact ? (showMoreFilters ? "col-span-full grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 lg:grid-cols-3" : "hidden") : "contents"}
+          >
+          <FilterSelect label="Listing type" value={saleType} onChange={setSaleType}>
+            <option value="">Any</option>
+            <option value="sale">For sale</option>
+            <option value="rent">To rent</option>
           </FilterSelect>
 
           <FilterSelect label="Baths" value={minBaths} onChange={setMinBaths}>
@@ -235,8 +260,9 @@ export default function ListingsClient({
             <option value="price_asc">Price low to high</option>
             <option value="price_desc">Price high to low</option>
           </FilterSelect>
+          </div>
 
-          <div>
+          {(!compact || activeFilters) && <div className={compact ? "col-span-full" : undefined}>
             <label className="mb-1 block text-xs font-semibold text-slate-600">
               Reset
             </label>
@@ -248,7 +274,7 @@ export default function ListingsClient({
             >
               Reset filters
             </button>
-          </div>
+          </div>}
         </div>
 
         <p className="mt-4 text-sm font-semibold text-slate-700">
@@ -309,12 +335,14 @@ function FilterSelect({
   onChange: (value: string) => void;
   children: React.ReactNode;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="mb-1 block text-xs font-semibold text-slate-600">
+      <label htmlFor={id} className="mb-1 block text-xs font-semibold text-slate-600">
         {label}
       </label>
       <select
+        id={id}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className="tech-input w-full rounded-xl px-4 py-3 text-sm outline-none"

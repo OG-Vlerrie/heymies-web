@@ -84,7 +84,7 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <ListingsClient initialListings={listings} initialError={error} />
+          <ListingsClient initialListings={listings} initialError={error} compact />
         </div>
       </section>
 
